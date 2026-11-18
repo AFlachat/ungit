@@ -5,9 +5,15 @@ const testRepoPaths = [];
 describe('[MODERN] shell', () => {
   const pageErrors = [];
 
-  before('Environment init', async () => {
+  before('Environment init', async function () {
+    this.timeout(240000);
     await environment.init();
-    await environment.createRepos(testRepoPaths, [{ bare: false }, { bare: true }]);
+    await environment.createRepos(testRepoPaths, [
+      { bare: false },
+      { bare: true },
+      { bare: false, initCommits: 3 },
+      { bare: false, initCommits: 150 },
+    ]);
   });
 
   after('Environment stop', () => environment.shutdown());
@@ -47,5 +53,75 @@ describe('[MODERN] shell', () => {
       throw new Error('wip-row should not exist in a bare repository');
     }
     if (pageErrors.length) throw new Error(`page errors: ${pageErrors.join('; ')}`);
+  });
+  const rowSel = (title) => `.modern-row[data-ta-node-title="${title}"]`;
+  const selectedSha = () =>
+    environment.page.$eval('.modern-repository', (el) => el.getAttribute('data-ta-selected-sha'));
+
+  it('shows one row per commit plus no WIP row when clean', async () => {
+    await environment.openUngit(testRepoPaths[2]);
+    for (const n of [0, 1, 2]) await environment.waitForElementVisible(rowSel(`Init Commit ${n}`));
+    const count = await environment.page.$$eval('.modern-row', (els) => els.length);
+    if (count !== 3) throw new Error(`expected 3 rows, got ${count}`);
+    if (await environment.page.$('[data-ta-clickable="wip-row"]')) {
+      throw new Error('wip-row should not exist in a clean repository');
+    }
+    // default selection is HEAD (the newest commit)
+    await environment.waitForElementVisible(`${rowSel('Init Commit 2')}.sel`);
+  });
+
+  it('shows a WIP row when the working tree is dirty', async () => {
+    await environment.createTestFile(`${testRepoPaths[2]}/wipfile.txt`, testRepoPaths[2]);
+    await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+    const count = await environment.page.$$eval('.modern-row', (els) => els.length);
+    if (count !== 4) throw new Error(`expected 4 rows, got ${count}`);
+    // creating a WIP row must not steal the selection from HEAD
+    await environment.waitForElementVisible(`${rowSel('Init Commit 2')}.sel`);
+  });
+
+  it('selects a commit on click', async () => {
+    await environment.click(rowSel('Init Commit 1'));
+    await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
+    const sha = await environment.page.$eval(`${rowSel('Init Commit 1')}`, (el) =>
+      el.getAttribute('data-ta-sha')
+    );
+    if (!sha || (await selectedSha()) !== sha) throw new Error('selection attribute mismatch');
+    await environment.click('[data-ta-clickable="wip-row"]');
+    await environment.waitForElementVisible('[data-ta-clickable="wip-row"].sel');
+    if ((await selectedSha()) !== 'WIP') throw new Error('WIP should be selected');
+  });
+
+  it('keeps selection after external refresh', async () => {
+    await environment.click(rowSel('Init Commit 1'));
+    await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
+    await environment.createTestFile(`${testRepoPaths[2]}/external.txt`, testRepoPaths[2]);
+    await environment.backgroundAction('POST', '/api/commit', {
+      path: testRepoPaths[2],
+      message: 'External Commit',
+      files: [{ name: 'external.txt' }],
+    });
+    await environment.ensureRedraw();
+    await environment.waitForElementVisible(rowSel('External Commit'));
+    await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
+  });
+
+  it('keeps the DOM row count small in a long history', async () => {
+    await environment.openUngit(testRepoPaths[3]);
+    await environment.waitForElementVisible('.modern-row');
+    const nodes = () =>
+      environment.page.evaluate(() => ungit.__app.content().repository().graph.nodes().length);
+    for (let i = 0; i < 20 && (await nodes()) < 150; i++) {
+      await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = el.scrollHeight));
+      await environment.wait(700);
+    }
+    const loaded = await nodes();
+    if (loaded < 150) throw new Error(`expected 150 loaded nodes, got ${loaded}`);
+    await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = el.scrollHeight));
+    await environment.wait(300);
+    const domRows = await environment.page.$$eval('.modern-row', (els) => els.length);
+    if (domRows >= 80) throw new Error(`expected < 80 DOM rows, got ${domRows}`);
+    await environment.waitForElementVisible(rowSel('Init Commit 0'));
+    await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = 0));
+    await environment.waitForElementVisible(rowSel('Init Commit 149'));
   });
 });

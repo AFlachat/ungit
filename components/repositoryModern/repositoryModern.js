@@ -41,8 +41,8 @@ class RepositoryModernViewModel {
     this.server.watchRepository(this.repoPath());
     this.submodules.fetchSubmodules();
 
-    // 'WIP' or a sha1
-    this.selection = ko.observable(this.isBareDir ? null : 'WIP');
+    // 'WIP', a sha1, 'stash:<..>' or null; commitList keeps it pointing at something that exists
+    this.selection = ko.observable(null);
     // null | { name, oldName?, sha1 ('' for WIP), type: 'text'|'image' }
     this.activeFile = ko.observable(null);
 
@@ -62,6 +62,8 @@ class RepositoryModernViewModel {
       const ref = this.graph.checkedOutRef();
       return !!(ref && ref.node() && ref.canBePushed(this.remotes.currentRemote()));
     });
+
+    this.commitList = components.create('commitList', { repo: this });
 
     this.fetchIcon = octicons.download.toSVG({ height: 16 });
     this.pullIcon = octicons['arrow-down'].toSVG({ height: 16 });
@@ -192,6 +194,7 @@ class RepositoryModernViewModel {
     if (this.remotes.onProgramEvent) this.remotes.onProgramEvent(event);
     if (this.submodules.onProgramEvent) this.submodules.onProgramEvent(event);
     if (this.branches.onProgramEvent) this.branches.onProgramEvent(event);
+    if (this.commitList.onProgramEvent) this.commitList.onProgramEvent(event);
     if (event.event == 'connected') this.server.watchRepository(this.repoPath());
   }
 

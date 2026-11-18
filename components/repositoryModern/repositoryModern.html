@@ -1,4 +1,7 @@
-<div class="modern-repository" data-bind="attr: { style: 'tab-size: ' + ungit.config.tabSize }">
+<div
+  class="modern-repository"
+  data-bind="attr: { style: 'tab-size: ' + ungit.config.tabSize, 'data-ta-selected-sha': selection() }"
+>
   <!-- ko component: gitErrors --><!-- /ko -->
 
   <div class="modern-topbar">
@@ -75,7 +78,8 @@
       data-bind="event: { mousedown: startDrag }"
     ></div>
     <div class="modern-col" data-ta-container="modern-center">
-      <!-- slots: commitList (Task 6), diffView overlay when activeFile() (Task 8) -->
+      <!-- ko component: commitList --><!-- /ko -->
+      <!-- slot: diffView overlay when activeFile() (Task 8) -->
     </div>
     <div
       class="modern-gutter"

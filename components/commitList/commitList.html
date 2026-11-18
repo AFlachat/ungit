@@ -1,0 +1,60 @@
+<div
+  class="modern-commit-list"
+  data-ta-container="modern-commit-list"
+  data-bind="style: { '--gcol': firstColumnWidth() + 'px' }"
+>
+  <div class="modern-graph-head">
+    <div class="modern-head-graph">Branch / Tag · Graph</div>
+    <div>Commit message</div>
+    <div>Author</div>
+    <div>Date</div>
+    <div>SHA</div>
+  </div>
+  <div class="modern-rows" data-ta-container="modern-rows" data-bind="event: { scroll: onScroll }">
+    <div class="modern-spacer-top" data-bind="style: { height: topSpacer() + 'px' }"></div>
+    <!-- ko foreach: { data: visibleRows, as: 'row' } -->
+    <div
+      class="modern-row"
+      data-bind="
+        css: { sel: $parent.isSelected(row), wip: row.wip },
+        click: $parent.select,
+        attr: {
+          'data-ta-node-title': row.wip ? null : row.title,
+          'data-ta-sha': row.sha1,
+          'data-ta-clickable': row.wip ? 'wip-row' : null
+        }"
+    >
+      <div class="modern-refs-graph">
+        <div class="modern-refs" data-bind="foreach: row.refs">
+          <span
+            class="modern-ref"
+            data-bind="
+              css: { current: current, tag: tag, remote: remote },
+              attr: {
+                'data-ta-name': name,
+                draggable: draggable ? 'true' : null,
+                title: name
+              },
+              style: { color: color, 'border-color': borderColor, background: background },
+              text: name"
+          ></span>
+        </div>
+        <span class="modern-lanes-wrap" data-bind="html: row.svg"></span>
+      </div>
+      <div class="modern-msg" data-bind="text: row.title, css: { wip: row.wip }"></div>
+      <div class="modern-author">
+        <!-- ko if: row.authorName -->
+        <span
+          class="modern-av"
+          data-bind="text: row.initials, style: { background: row.avatarColor }"
+        ></span>
+        <span data-bind="text: row.authorName"></span>
+        <!-- /ko -->
+      </div>
+      <div class="modern-date" data-bind="text: row.date"></div>
+      <div class="modern-sha" data-bind="text: row.shortSha"></div>
+    </div>
+    <!-- /ko -->
+    <div class="modern-spacer-bottom" data-bind="style: { height: bottomSpacer() + 'px' }"></div>
+  </div>
+</div>
