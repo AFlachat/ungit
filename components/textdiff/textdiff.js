@@ -68,6 +68,7 @@ class TextDiffViewModel {
     this.loadCount = loadLimit;
     this.textDiffType = args.textDiffType;
     this.whiteSpace = args.whiteSpace;
+    this.contextLines = args.contextLines;
     this.isShowingDiffs = args.isShowingDiffs;
     this.editState = args.editState;
     this.wordWrap = args.wordWrap;
@@ -96,13 +97,15 @@ class TextDiffViewModel {
   }
 
   getDiffArguments() {
-    return {
+    const args = {
       file: this.filename,
       oldFile: this.oldFilename,
       path: this.repoPath(),
       sha1: this.sha1 ? this.sha1 : '',
       whiteSpace: this.whiteSpace.value(),
     };
+    if (this.contextLines !== undefined) args.context = this.contextLines;
+    return args;
   }
 
   invalidateDiff() {

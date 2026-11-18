@@ -236,3 +236,107 @@ describe('git-api diff', () => {
       });
   });
 });
+
+describe('git-api diff context lines', () => {
+  let testDir, commitSha1;
+  const file = 'ctx.txt';
+  const lines = [
+    'line-a-x',
+    'line-b-x',
+    'line-c-x',
+    'line-d-x',
+    'line-e-x',
+    'line-f-x',
+    'line-g-x',
+    'line-h-x',
+    'line-i-x',
+    'line-j-x',
+    'line-k-x',
+    'line-l-x',
+    'line-m-x',
+    'line-n-x',
+    'line-o-x',
+    'line-p-x',
+    'line-q-x',
+    'line-r-x',
+    'line-s-x',
+    'line-t-x',
+  ];
+
+  before(async () => {
+    testDir = await common.initRepo(req);
+    await common.post(req, '/testing/createfile', {
+      file: path.join(testDir, file),
+      content: lines.join('\n') + '\n',
+    });
+    await common.post(req, '/commit', { path: testDir, message: 'Init', files: [{ name: file }] });
+    const changed = lines.slice();
+    changed[9] = 'CHANGED10';
+    await common.post(req, '/testing/changefile', {
+      file: path.join(testDir, file),
+      content: changed.join('\n') + '\n',
+    });
+    await common.post(req, '/commit', {
+      path: testDir,
+      message: 'Change',
+      files: [{ name: file }],
+    });
+    const log = await common.get(req, '/gitlog', { path: testDir });
+    commitSha1 = log.nodes[0].sha1;
+    // working tree change for the non-commit diff
+    changed[9] = 'CHANGED10 again';
+    await common.post(req, '/testing/changefile', {
+      file: path.join(testDir, file),
+      content: changed.join('\n') + '\n',
+    });
+  });
+
+  after(() => common.post(req, '/testing/cleanup', undefined));
+
+  const hasAll = (res) => lines.every((l, i) => i == 9 || res.indexOf(l) > -1);
+
+  it('diff with context=1000000 should include every line of the file', async () => {
+    const res = await common.get(req, '/diff', { path: testDir, file, context: 1000000 });
+    expect(hasAll(res)).to.be(true);
+  });
+
+  it('diff without context should only include 3 lines around the change', async () => {
+    const res = await common.get(req, '/diff', { path: testDir, file });
+    expect(res.indexOf('line-a-x')).to.be(-1);
+    expect(res.indexOf('line-t-x')).to.be(-1);
+    expect(res.indexOf('line-g-x')).to.be.above(-1);
+  });
+
+  it('diff with invalid context is ignored', async () => {
+    const plain = await common.get(req, '/diff', { path: testDir, file });
+    const res = await common.get(req, '/diff', { path: testDir, file, context: 'abc' });
+    expect(res).to.be(plain);
+  });
+
+  it('commit diff with context=1000000 should include every line of the file', async () => {
+    const res = await common.get(req, '/diff', {
+      path: testDir,
+      file,
+      sha1: commitSha1,
+      context: 1000000,
+    });
+    expect(hasAll(res)).to.be(true);
+  });
+
+  it('commit diff without context should only include 3 lines around the change', async () => {
+    const res = await common.get(req, '/diff', { path: testDir, file, sha1: commitSha1 });
+    expect(res.indexOf('line-a-x')).to.be(-1);
+    expect(res.indexOf('line-t-x')).to.be(-1);
+  });
+
+  it('commit diff with invalid context is ignored', async () => {
+    const plain = await common.get(req, '/diff', { path: testDir, file, sha1: commitSha1 });
+    const res = await common.get(req, '/diff', {
+      path: testDir,
+      file,
+      sha1: commitSha1,
+      context: 'abc',
+    });
+    expect(res).to.be(plain);
+  });
+});
