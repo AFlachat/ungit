@@ -46,15 +46,19 @@ class RepositoryModernViewModel {
     // null | { name, oldName?, sha1 ('' for WIP), type: 'text'|'image' }
     this.activeFile = ko.observable(null);
 
+    this.isPulling = false;
     this.canPull = ko.computed(() => {
+      this.graph.refs(); // dependency: remote refs are looked up in a plain map
       const ref = this.graph.checkedOutRef();
-      return !!(
-        ref &&
-        this.remotes.currentRemote() &&
-        ref.getRemoteRef(this.remotes.currentRemote())
-      );
+      const remote = this.remotes.currentRemote();
+      if (!ref || !remote) return false;
+      const remoteRef = ref.getRemoteRef(remote);
+      if (!remoteRef) return false;
+      remoteRef.node();
+      return true;
     });
     this.canPush = ko.computed(() => {
+      this.graph.refs(); // dependency: remote refs are looked up in a plain map
       const ref = this.graph.checkedOutRef();
       return !!(ref && ref.node() && ref.canBePushed(this.remotes.currentRemote()));
     });
@@ -71,7 +75,6 @@ class RepositoryModernViewModel {
     ko.renderTemplate('repositoryModern', this, {}, parentElement);
     const main = parentElement.querySelector('.modern-main');
     if (main) {
-      this.mainElement = main;
       main.style.setProperty('--left', `${this.storedWidth(LEFT)}px`);
       main.style.setProperty('--right', `${this.storedWidth(RIGHT)}px`);
     }
@@ -105,12 +108,14 @@ class RepositoryModernViewModel {
   }
 
   async pull() {
-    await this.remotes.fetch({ nodes: true, tags: true });
-    const ref = this.graph.checkedOutRef();
-    if (!ref) return;
-    const remoteRef = ref.getRemoteRef(this.remotes.currentRemote());
-    if (!remoteRef || remoteRef.node() === this.graph.HEAD()) return;
+    if (this.isPulling) return;
+    this.isPulling = true;
     try {
+      await this.remotes.fetch({ nodes: true, tags: true });
+      const ref = this.graph.checkedOutRef();
+      if (!ref) return;
+      const remoteRef = ref.getRemoteRef(this.remotes.currentRemote());
+      if (!remoteRef || remoteRef.node() === this.graph.HEAD()) return;
       await this.server.postPromise('/rebase', {
         path: this.repoPath(),
         onto: remoteRef.localRefName,
@@ -118,6 +123,8 @@ class RepositoryModernViewModel {
     } catch (err) {
       if (err.errorCode !== 'merge-failed') this.server.unhandledRejection(err);
       else ungit.logger.warn('pull (rebase) failed', err);
+    } finally {
+      this.isPulling = false;
     }
   }
 
