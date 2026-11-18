@@ -431,7 +431,25 @@ class Squash extends ActionBase {
   }
 }
 
+/**
+ * Runs an action class programmatically (e.g. from a context menu): sets the action context,
+ * performs, then disposes the action's computeds and clears the context.
+ */
+const performAction = async (graph, ActionClass, node, context) => {
+  const action = new ActionClass(graph, node);
+  graph.currentActionContext(context);
+  try {
+    return await action.doPerform();
+  } finally {
+    graph.currentActionContext(null);
+    ['visible', 'isHighlighted', 'cssClasses'].forEach((k) => {
+      if (action[k] && action[k].dispose) action[k].dispose();
+    });
+  }
+};
+
 const GraphActions = {
+  performAction: performAction,
   Move: Move,
   Rebase: Rebase,
   Merge: Merge,

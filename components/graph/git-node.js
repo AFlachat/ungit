@@ -126,6 +126,11 @@ class GitNodeViewModel extends Animateable {
 
   render() {
     this.refSearchFormVisible(false);
+    if (this.graph.headless) {
+      // Headless: no layout, only the branch colour is needed.
+      this.color(this.ideologicalBranch() ? this.ideologicalBranch().color : '#666');
+      return;
+    }
     if (!this.isInited) return;
     if (this.ancestorOfHEAD()) {
       this.r(30);

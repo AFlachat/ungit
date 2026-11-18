@@ -9,11 +9,14 @@ const EdgeViewModel = require('./edge');
 const { ComponentRoot } = require('../ComponentRoot');
 const numberOfNodesPerLoad = ungit.config.numberOfNodesPerLoad;
 
-components.register('graph', (args) => new GraphViewModel(args.server, args.repoPath));
+components.register('graph', (args) =>
+  new GraphViewModel(args.server, args.repoPath, !!args.headless)
+);
 
 class GraphViewModel extends ComponentRoot {
-  constructor(server, repoPath) {
+  constructor(server, repoPath, headless) {
     super();
+    this.headless = !!headless;
     this._isLoadNodesFromApiRunning = false;
     this.updateBranches = _.debounce(this._updateBranches, 250, this.defaultDebounceOption);
     this.loadNodesFromApi = _.debounce(this._loadNodesFromApi, 250, this.defaultDebounceOption);
@@ -141,14 +144,19 @@ class GraphViewModel extends ComponentRoot {
 
       this.edges(edges);
       this.nodes(nodes);
-      if (nodes.length > 0) {
-        this.graphHeight(nodes[nodes.length - 1].cy() + 80);
+      if (!this.headless) {
+        if (nodes.length > 0) {
+          this.graphHeight(nodes[nodes.length - 1].cy() + 80);
+        }
+        this.graphWidth(1000 + this.heighstBranchOrder * 90);
       }
-      this.graphWidth(1000 + this.heighstBranchOrder * 90);
     } catch (e) {
       this.server.unhandledRejection(e);
     } finally {
-      if (window.innerHeight - this.graphHeight() > 0 && nodeSize != this.nodes().length) {
+      if (
+        !this.headless &&
+        window.innerHeight - this.graphHeight() > 0 && nodeSize != this.nodes().length
+      ) {
         this.scrolledToEnd();
       }
       this._isLoadNodesFromApiRunning = false;

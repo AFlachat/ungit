@@ -19,6 +19,7 @@ export class FormItems {
   value: ko.Observable
   type: string
   autoFocus: boolean
+  invalid?: ko.Observable<boolean>
   constructor(name: string, value: ko.Observable, type: string, autoFocus: boolean) {
     this.name = name;
     this.value = value;
