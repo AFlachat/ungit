@@ -1,0 +1,90 @@
+<div class="modern-repository" data-bind="attr: { style: 'tab-size: ' + ungit.config.tabSize }">
+  <!-- ko component: gitErrors --><!-- /ko -->
+
+  <div class="modern-topbar">
+    <div class="modern-repo-path" data-bind="text: repoPath"></div>
+    <div class="modern-tb-group">
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-fetch"
+        data-bind="click: fetch, enable: remotes.fetchEnabled"
+      >
+        <span data-bind="html: fetchIcon"></span>Fetch
+      </button>
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-pull"
+        data-bind="click: pull, enable: canPull"
+      >
+        <span data-bind="html: pullIcon"></span>Pull
+      </button>
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-push"
+        data-bind="click: push, enable: canPush"
+      >
+        <span data-bind="html: pushIcon"></span>Push
+      </button>
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-branch"
+        data-bind="click: createBranch, enable: graph.HEAD"
+      >
+        <span data-bind="html: branchIcon"></span>Branch
+      </button>
+      <!-- ko ifnot: isBareDir -->
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-stash"
+        data-bind="click: stashAll"
+      >
+        <span data-bind="html: stashIcon"></span>Stash
+      </button>
+      <!-- /ko -->
+      <button
+        type="button"
+        class="modern-tb-btn"
+        data-ta-clickable="modern-gitignore"
+        data-bind="click: editGitignore"
+      >
+        <span data-bind="html: ignoreIcon"></span>.gitignore
+      </button>
+    </div>
+    <div class="modern-spacer"></div>
+    <div class="modern-remote-sel">
+      <select
+        data-ta-input="modern-remote"
+        data-bind="options: remotes.remotes, optionsText: 'name', optionsValue: 'name', value: remotes.currentRemote"
+      ></select>
+    </div>
+  </div>
+
+  <div class="modern-main">
+    <div class="modern-col modern-sidebar-col" data-ta-container="modern-sidebar">
+      <!-- slot: sidebar (Task 9) -->
+    </div>
+    <div
+      class="modern-gutter"
+      data-ta-clickable="modern-gutter-left"
+      data-side="left"
+      data-bind="event: { mousedown: startDrag }"
+    ></div>
+    <div class="modern-col" data-ta-container="modern-center">
+      <!-- slots: commitList (Task 6), diffView overlay when activeFile() (Task 8) -->
+    </div>
+    <div
+      class="modern-gutter"
+      data-ta-clickable="modern-gutter-right"
+      data-side="right"
+      data-bind="event: { mousedown: startDrag }"
+    ></div>
+    <div class="modern-col" data-ta-container="modern-right">
+      <!-- slots: stagingPanel when selection() === 'WIP', else commitDetails (Task 7) -->
+    </div>
+  </div>
+</div>

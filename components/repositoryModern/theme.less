@@ -1,0 +1,70 @@
+// Shared theme for the modern UI. Imported (relative path) by every modern component's .less.
+@modern-bg: #1b1d23;
+@modern-bg-2: #22252c;
+@modern-bg-3: #2a2e36;
+@modern-bg-hover: #2f343d;
+@modern-bg-sel: #2d3a52;
+@modern-border: #353a44;
+@modern-text: #d7dae0;
+@modern-muted: #8b92a0;
+@modern-faint: #5d6472;
+@modern-accent: #4c9aff;
+@modern-green: #3fb950;
+@modern-red: #f85149;
+@modern-yellow: #d29922;
+@modern-row-h: 28px;
+
+.modern-repository {
+  --bg: @modern-bg;
+  --bg-2: @modern-bg-2;
+  --bg-3: @modern-bg-3;
+  --bg-hover: @modern-bg-hover;
+  --bg-sel: @modern-bg-sel;
+  --border: @modern-border;
+  --text: @modern-text;
+  --muted: @modern-muted;
+  --faint: @modern-faint;
+  --accent: @modern-accent;
+  --green: @modern-green;
+  --red: @modern-red;
+  --yellow: @modern-yellow;
+  --add-bg: rgba(63, 185, 80, 0.14);
+  --add-bg-strong: rgba(63, 185, 80, 0.32);
+  --del-bg: rgba(248, 81, 73, 0.14);
+  --del-bg-strong: rgba(248, 81, 73, 0.32);
+  --row-h: @modern-row-h;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+// Dark overrides for the shared page chrome when the modern UI is active.
+body.modern-ui {
+  background: @modern-bg;
+  color: @modern-text;
+
+  .navbar,
+  .navbar-default {
+    background: @modern-bg-2;
+    border-color: @modern-border;
+    box-shadow: none;
+  }
+
+  .app {
+    margin-top: 0;
+
+    > .container-fluid {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+
+  .home {
+    color: @modern-text;
+
+    .repository,
+    .panel,
+    .well {
+      background: @modern-bg-2;
+      border-color: @modern-border;
+    }
+  }
+}

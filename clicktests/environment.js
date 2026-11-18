@@ -222,7 +222,7 @@ class Environment {
 
   async openUngit(tempDirPath) {
     await this.goto(`${this.getRootUrl()}/#/repository?path=${encodePath(tempDirPath)}`);
-    await this.waitForElementVisible('.repository-actions');
+    await this.waitForElementVisible('.repository-actions, .modern-repository');
     await this.page.waitForNetworkIdle();
   }
 
