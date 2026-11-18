@@ -1,0 +1,34 @@
+<div
+  class="modern-file modern-staging-file"
+  data-bind="
+    attr: { 'data-ta-file': file.name(), title: file.displayName() },
+    css: { active: $root.isActive(file), conflict: file.conflict },
+    click: $root.openFile.bind($root)"
+>
+  <input
+    type="checkbox"
+    data-ta-clickable="modern-stage-toggle"
+    data-bind="checked: file.editState() === 'staged', click: $root.toggleFile.bind($root, file), clickBubble: false"
+  />
+  <span
+    class="modern-st"
+    data-bind="text: $root.status(file), css: 'st-' + $root.status(file)"
+  ></span>
+  <span class="modern-fn"><bdi data-bind="text: file.displayName"></bdi></span>
+  <span class="modern-fs">
+    <span class="modern-add" data-bind="text: file.additions"></span>
+    <span class="modern-del" data-bind="text: file.deletions"></span>
+  </span>
+  <span class="modern-bar5" data-bind="foreach: $root.bar(file)"
+    ><i data-bind="css: $data"></i
+  ></span>
+  <button
+    type="button"
+    class="modern-file-discard"
+    title="Discard changes"
+    data-ta-clickable="modern-discard-file"
+    data-bind="click: $root.discardFile.bind($root, file), clickBubble: false"
+  >
+    ×
+  </button>
+</div>

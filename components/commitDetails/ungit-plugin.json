@@ -1,0 +1,9 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "commitDetails": "commitDetails.html"
+    },
+    "javascript": "commitDetails.bundle.js",
+    "css": "commitDetails.css"
+  }
+}

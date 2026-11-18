@@ -13,6 +13,9 @@ describe('[MODERN] shell', () => {
       { bare: true },
       { bare: false, initCommits: 3 },
       { bare: false, initCommits: 150 },
+      { bare: false }, // 4: empty repository
+      { bare: false, initCommits: 3 }, // 5: right panel
+      { bare: false, initCommits: 1 }, // 6: merge conflict
     ]);
   });
 
@@ -123,5 +126,100 @@ describe('[MODERN] shell', () => {
     await environment.waitForElementVisible(rowSel('Init Commit 0'));
     await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = 0));
     await environment.waitForElementVisible(rowSel('Init Commit 149'));
+  });
+
+  describe('right panel', () => {
+    const rowSel = (title) => `.modern-row[data-ta-node-title="${title}"]`;
+    const rightSel = '[data-ta-container="modern-right"]';
+    const titleInput = '[data-ta-input="modern-commit-title"]';
+    const commitBtn = '[data-ta-clickable="modern-commit"]';
+
+    it('shows commit details and navigates to the parent', async () => {
+      await environment.openUngit(testRepoPaths[5]);
+      await environment.waitForElementVisible(rowSel('Init Commit 2'));
+      await environment.click(rowSel('Init Commit 2'));
+      await environment.waitForElementVisible(`${rightSel} [data-ta-clickable="copy-sha"]`);
+      await environment.waitForElementVisible(`${rightSel} .modern-file[data-ta-file="testy2"]`);
+      await environment.waitForElementVisible(`${rightSel} [data-ta-clickable="modern-parent"]`);
+      await environment.click(`${rightSel} [data-ta-clickable="modern-parent"]`);
+      await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
+      await environment.waitForElementVisible(`${rightSel} .modern-file[data-ta-file="testy1"]`);
+    });
+
+    it('commits from the WIP panel', async () => {
+      await environment.createTestFile(`${testRepoPaths[5]}/wipcommit.txt`, testRepoPaths[5]);
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible(
+        `${rightSel} .modern-file[data-ta-file="wipcommit.txt"]`
+      );
+      const fileSel = (sec) =>
+        `${rightSel} [data-ta-container="modern-${sec}"] .modern-file[data-ta-file="wipcommit.txt"]`;
+      await environment.waitForElementVisible(fileSel('staged'));
+      await environment.click(`${fileSel('staged')} input[type=checkbox]`);
+      await environment.waitForElementVisible(fileSel('unstaged'));
+      await environment.waitForElementVisible(`${commitBtn}[disabled]`);
+      await environment.click(`${fileSel('unstaged')} input[type=checkbox]`);
+      await environment.waitForElementVisible(fileSel('staged'));
+      await environment.insert(titleInput, 'Modern WIP commit');
+      await environment.waitForElementVisible(`${commitBtn}:not([disabled])`);
+      await environment.click(commitBtn);
+      await environment.waitForElementHidden('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible(rowSel('Modern WIP commit'));
+      const first = await environment.page.$eval('.modern-row', (el) =>
+        el.getAttribute('data-ta-node-title')
+      );
+      if (first !== 'Modern WIP commit') throw new Error(`top row is "${first}"`);
+    });
+
+    it('commits in an empty repository', async () => {
+      await environment.openUngit(testRepoPaths[4]);
+      await environment.createTestFile(`${testRepoPaths[4]}/first.txt`, testRepoPaths[4]);
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.insert(titleInput, 'First commit');
+      await environment.waitForElementVisible(`${commitBtn}:not([disabled])`);
+      await environment.click(commitBtn);
+      await environment.waitForElementVisible(rowSel('First commit'));
+    });
+
+    it('shows conflict banner during a merge conflict', async () => {
+      const dir = testRepoPaths[6];
+      const file = `${dir}/testy0`;
+      await environment.backgroundAction('POST', '/api/branches', { path: dir, name: 'other' });
+      await environment.backgroundAction('POST', '/api/testing/changefile', {
+        path: dir,
+        file,
+        content: 'master side\n',
+      });
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: dir,
+        message: 'Master edit',
+        files: [{ name: 'testy0' }],
+      });
+      await environment.backgroundAction('POST', '/api/checkout', { path: dir, name: 'other' });
+      await environment.backgroundAction('POST', '/api/testing/changefile', {
+        path: dir,
+        file,
+        content: 'other side\n',
+      });
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: dir,
+        message: 'Other edit',
+        files: [{ name: 'testy0' }],
+      });
+      await environment.openUngit(dir);
+      try {
+        await environment.backgroundAction('POST', '/api/merge', { path: dir, with: 'master' });
+      } catch {
+        // expected: merge-failed
+      }
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible(`${rightSel} [data-ta-container="conflict-banner"]`);
+      await environment.waitForElementVisible(`${commitBtn}[disabled]`);
+      await environment.click('[data-ta-clickable="modern-conflict-abort"]');
+      await environment.waitForElementHidden('[data-ta-container="conflict-banner"]');
+    });
   });
 });

@@ -88,7 +88,12 @@
       data-bind="event: { mousedown: startDrag }"
     ></div>
     <div class="modern-col" data-ta-container="modern-right">
-      <!-- slots: stagingPanel when selection() === 'WIP', else commitDetails (Task 7) -->
+      <!-- ko if: selection() === 'WIP' -->
+      <!-- ko component: stagingPanel --><!-- /ko -->
+      <!-- /ko -->
+      <!-- ko ifnot: selection() === 'WIP' -->
+      <!-- ko component: commitDetails --><!-- /ko -->
+      <!-- /ko -->
     </div>
   </div>
 </div>

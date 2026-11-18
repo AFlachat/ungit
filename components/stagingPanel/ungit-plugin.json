@@ -1,0 +1,10 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "stagingPanel": "stagingPanel.html",
+      "stagingPanelFile": "stagingPanelFile.html"
+    },
+    "javascript": "stagingPanel.bundle.js",
+    "css": "stagingPanel.css"
+  }
+}

@@ -64,6 +64,8 @@ class RepositoryModernViewModel {
     });
 
     this.commitList = components.create('commitList', { repo: this });
+    this.commitDetails = components.create('commitDetails', { repo: this });
+    this.stagingPanel = this.isBareDir ? null : components.create('stagingPanel', { repo: this });
 
     this.fetchIcon = octicons.download.toSVG({ height: 16 });
     this.pullIcon = octicons['arrow-down'].toSVG({ height: 16 });
