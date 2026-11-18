@@ -66,9 +66,20 @@ class Row {
     this.sha1 = sha1; // 'WIP' for the working-tree row
     this.node = node;
     this.parents = parents;
-    this.lanes = lanes;
+    this.laneData = ko.observable(lanes);
     this.wip = sha1 === 'WIP';
     this.list = list;
+  }
+
+  get lanes() {
+    return this.laneData();
+  }
+
+  // Row instances are reused across refreshes (identity keeps foreach from re-rendering).
+  update(node, parents, lanes) {
+    this.node = node;
+    this.parents = parents;
+    if (JSON.stringify(this.laneData.peek()) !== JSON.stringify(lanes)) this.laneData(lanes);
   }
 
   // The getters below are read from bindings, so only rendered rows subscribe to node data.
@@ -138,6 +149,7 @@ class CommitListViewModel {
     this.scrollTop = ko.observable(0);
     this.viewportHeight = ko.observable(0);
 
+    this._rowCache = new Map(); // sha1 | 'WIP' -> Row
     this.wipFileCount = ko.computed(() => this._wipFiles().length);
     this.hasWip = ko.computed(() => !repo.isBareDir && this.wipFileCount() > 0);
 
@@ -150,7 +162,17 @@ class CommitListViewModel {
         entries.unshift({ sha1: 'WIP', parents: head ? [head.sha1] : [], node: null });
       }
       const lanes = computeLanes(entries);
-      return entries.map((e, i) => new Row(e.sha1, e.node, e.parents, lanes[i], this));
+      const cache = this._rowCache;
+      const seen = new Set();
+      const result = entries.map((e, i) => {
+        seen.add(e.sha1);
+        let row = cache.get(e.sha1);
+        if (row) row.update(e.node, e.parents, lanes[i]);
+        else cache.set(e.sha1, (row = new Row(e.sha1, e.node, e.parents, lanes[i], this)));
+        return row;
+      });
+      for (const sha of cache.keys()) if (!seen.has(sha)) cache.delete(sha);
+      return result;
     });
 
     this.lanesWidth = ko.computed(() => {
