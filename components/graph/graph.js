@@ -9,8 +9,9 @@ const EdgeViewModel = require('./edge');
 const { ComponentRoot } = require('../ComponentRoot');
 const numberOfNodesPerLoad = ungit.config.numberOfNodesPerLoad;
 
-components.register('graph', (args) =>
-  new GraphViewModel(args.server, args.repoPath, !!args.headless)
+components.register(
+  'graph',
+  (args) => new GraphViewModel(args.server, args.repoPath, !!args.headless)
 );
 
 class GraphViewModel extends ComponentRoot {
@@ -155,7 +156,8 @@ class GraphViewModel extends ComponentRoot {
     } finally {
       if (
         !this.headless &&
-        window.innerHeight - this.graphHeight() > 0 && nodeSize != this.nodes().length
+        window.innerHeight - this.graphHeight() > 0 &&
+        nodeSize != this.nodes().length
       ) {
         this.scrolledToEnd();
       }
