@@ -21,3 +21,6 @@ ungit-*.tgz
 
 # brainstorming companion
 .superpowers/
+
+# design notes kept out of the repository
+docs/
