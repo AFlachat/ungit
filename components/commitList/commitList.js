@@ -218,7 +218,9 @@ class CommitListViewModel {
     // sha1 -> name of the branch owning the commit (see branchOwner.js)
     this.owners = ko.pureComputed(() => {
       const graph = repo.graph;
-      const commits = graph.nodes().map((n) => ({ sha1: n.sha1, parents: n.parents() }));
+      const commits = graph
+        .nodes()
+        .map((n) => ({ sha1: n.sha1, parents: n.parents(), title: n.title() }));
       graph.checkedOutBranch();
       const branches = graph
         .refs()
