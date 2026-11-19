@@ -324,5 +324,27 @@ describe('[MODERN] shell', () => {
       await environment.waitForElementHidden(diffSel);
       await environment.waitForElementVisible(listSel);
     });
+
+    it('toggling whitespace re-fetches only the current diff', async () => {
+      await environment.click(fileSel);
+      await environment.waitForElementVisible('.d2h-file-side-diff');
+      for (const m of ['inline', 'hunk', 'split', 'inline', 'hunk']) {
+        await environment.click(`[data-ta-clickable="diff-mode-${m}"]`);
+        await environment.waitForElementVisible(`[data-ta-clickable="diff-mode-${m}"].on`);
+        await environment.page.waitForNetworkIdle();
+      }
+      const urls = [];
+      const onRequest = (req) => {
+        if (/\/api\/diff\?/.test(req.url())) urls.push(req.url());
+      };
+      environment.page.on('request', onRequest);
+      await environment.click('[data-ta-clickable="diff-whitespace"]');
+      await environment.page.waitForNetworkIdle();
+      await environment.wait(500);
+      environment.page.off('request', onRequest);
+      if (urls.length !== 1) throw new Error(`expected 1 /diff request, got ${urls.length}`);
+      await environment.click('[data-ta-clickable="diff-close"]');
+      await environment.waitForElementVisible(listSel);
+    });
   });
 });

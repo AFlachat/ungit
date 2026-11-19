@@ -269,7 +269,17 @@ class CommitListViewModel {
   _attach(root) {
     const el = root.querySelector('.modern-rows');
     this.rowsEl = el;
+    let wasHidden = false;
     const measure = () => {
+      // hidden (display: none) while a diff is open: measure nothing, load nothing
+      if (!el.clientHeight) {
+        wasHidden = true;
+        return;
+      }
+      if (wasHidden) {
+        wasHidden = false;
+        el.scrollTop = this.scrollTop(); // the browser may have reset it
+      }
       this.viewportHeight(el.clientHeight);
       this._loadMoreIfNearEnd();
     };
@@ -290,13 +300,14 @@ class CommitListViewModel {
 
   onScroll(data, event) {
     const el = event.target;
+    if (!el.clientHeight) return;
     this.scrollTop(el.scrollTop);
     this._loadMoreIfNearEnd();
   }
 
   _loadMoreIfNearEnd() {
     const el = this.rowsEl;
-    if (!el || !this.rows().length) return;
+    if (!el || !el.clientHeight || !this.rows().length) return;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_END)
       this.repo.graph.scrolledToEnd();
   }

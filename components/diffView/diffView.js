@@ -17,6 +17,12 @@ class DiffViewViewModel {
     this.wordWrap = components.create('textdiff.wordwrap');
 
     this.diff = ko.computed(() => {
+      // a replaced diff must stop reacting to the shared whitespace/wrap toggles
+      const prev = ko.ignoreDependencies(() => this.diff && this.diff.peek());
+      if (prev) {
+        prev.isShowingDiffs(false);
+        if (prev.dispose) prev.dispose();
+      }
       const file = this.repo.activeFile();
       const mode = this.mode();
       if (!file) return null;

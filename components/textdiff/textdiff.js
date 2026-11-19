@@ -77,19 +77,27 @@ class TextDiffViewModel {
     this.htmlSrc = undefined;
     this.isParsed = ko.observable(false);
 
-    this.isShowingDiffs.subscribe((newValue) => {
-      if (newValue) this.render();
-    });
-    this.textDiffType.value.subscribe(() => {
-      if (this.isShowingDiffs()) this.render();
-    });
-    this.whiteSpace.value.subscribe(() => {
-      if (this.isShowingDiffs()) this.invalidateDiff();
-    });
+    this.subscriptions = [
+      this.isShowingDiffs.subscribe((newValue) => {
+        if (newValue) this.render();
+      }),
+      this.textDiffType.value.subscribe(() => {
+        if (this.isShowingDiffs()) this.render();
+      }),
+      this.whiteSpace.value.subscribe(() => {
+        if (this.isShowingDiffs()) this.invalidateDiff();
+      }),
+    ];
 
     if (this.isShowingDiffs()) {
       this.render();
     }
+  }
+
+  // Stops this instance from reacting to shared observables once it has been replaced.
+  dispose() {
+    this.subscriptions.forEach((sub) => sub.dispose());
+    this.subscriptions = [];
   }
 
   updateNode(parentElement) {
