@@ -14,6 +14,9 @@ components.register(
 const LEFT = { key: 'modernLeftWidth', min: 160, max: 420, def: 230 };
 const RIGHT = { key: 'modernRightWidth', min: 280, max: 640, def: 380 };
 const clamp = (v, { min, max }) => Math.max(min, Math.min(max, v));
+// a selection naming a commit (not WIP, a stash or nothing)
+const isCommitSelection = (sel) =>
+  typeof sel === 'string' && sel !== 'WIP' && !sel.startsWith('stash:');
 
 class RepositoryModernViewModel {
   constructor(server, path) {
@@ -45,6 +48,20 @@ class RepositoryModernViewModel {
     this.selection = ko.observable(null);
     // null | { name, oldName?, sha1 ('' for WIP), type: 'text'|'image' }
     this.activeFile = ko.observable(null);
+
+    // The node of the selected commit, null when no commit is selected or while it is not loaded:
+    // nodesById also holds placeholder nodes (isInited false) for ref targets and parents that are
+    // past the loaded part of the history.
+    this.selectedNode = ko.computed(() => {
+      const sel = this.selection();
+      if (!isCommitSelection(sel)) return null;
+      this.graph.nodes(); // dependency: nodesById is a plain map, nodes() changes on every load
+      const node = this.graph.nodesById[sel];
+      return node && node.isInited ? node : null;
+    });
+    this.selectedCommitNotLoaded = ko.computed(
+      () => isCommitSelection(this.selection()) && !this.selectedNode()
+    );
 
     // files of the current selection, in the order the right panel shows them
     this.fileList = ko.computed(() => {
@@ -78,17 +95,23 @@ class RepositoryModernViewModel {
           deletions: num(f.removed()),
         }));
       }
-      this.graph.nodes(); // dependency: nodesById is a plain map
-      const node = sel ? this.graph.nodesById[sel] : null;
+      const node = this.selectedNode();
       const diffs = node && node.commitComponent ? node.commitComponent.fileLineDiffs() : null;
       return (diffs || []).map((f) => ({
         name: f.fileName,
         oldName: f.oldFileName,
-        sha1: sel,
+        sha1: node.sha1,
         type: f.type,
         additions: num(f.additions),
         deletions: num(f.deletions),
       }));
+    });
+    // a diff whose file is no longer listed (committed, discarded, stash dropped...) is closed
+    this.fileList.subscribe((files) => {
+      const active = this.activeFile.peek();
+      if (active && !files.some((f) => f.sha1 === active.sha1 && f.name === active.name)) {
+        this.activeFile(null);
+      }
     });
 
     this.isPulling = false;
@@ -154,6 +177,12 @@ class RepositoryModernViewModel {
 
   closeDiff() {
     this.activeFile(null);
+  }
+
+  // Loads one more page of history, e.g. to reach a selected commit that is not loaded yet.
+  loadMoreCommits() {
+    this.graph.limit(this.graph.limit() + ungit.config.numberOfNodesPerLoad);
+    this.graph.loadNodesFromApi();
   }
 
   fetch() {

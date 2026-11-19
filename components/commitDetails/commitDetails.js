@@ -9,11 +9,8 @@ class CommitDetailsViewModel {
     this.repo = args.repo;
     this.avatarFailed = ko.observable(false);
     // the node of the selected commit, null while it is not loaded (or when WIP/stash is selected)
-    this.node = ko.computed(() => {
-      this.repo.graph.nodes(); // dependency: nodesById is a plain map
-      const sel = this.repo.selection();
-      return sel && sel !== 'WIP' ? this.repo.graph.nodesById[sel] || null : null;
-    });
+    this.node = this.repo.selectedNode;
+    this.notLoaded = this.repo.selectedCommitNotLoaded;
     // the stash selected as 'stash:<sha1>', null otherwise
     this.stash = ko.computed(() => {
       const sel = this.repo.selection();
@@ -92,6 +89,10 @@ class CommitDetailsViewModel {
       sha1: this.currentSha(),
       type: file.type,
     });
+  }
+
+  loadMore() {
+    this.repo.loadMoreCommits();
   }
 
   gotoParent(sha1) {

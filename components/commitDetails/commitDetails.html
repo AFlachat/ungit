@@ -73,6 +73,23 @@
   </div>
 </div>
 <!-- /ko -->
+<!-- ko if: notLoaded -->
+<div class="modern-panel modern-commit-details" data-ta-container="commit-not-loaded">
+  <div class="modern-panel-scroll">
+    <div class="modern-not-loaded">
+      <p>This commit is not loaded yet.</p>
+      <button
+        type="button"
+        class="modern-shabtn"
+        data-ta-clickable="load-more-commits"
+        data-bind="click: loadMore"
+      >
+        Load more commits
+      </button>
+    </div>
+  </div>
+</div>
+<!-- /ko -->
 <!-- ko if: stash -->
 <div class="modern-panel modern-commit-details" data-ta-container="stash-details">
   <div class="modern-panel-scroll" data-bind="with: stash">

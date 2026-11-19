@@ -202,13 +202,27 @@ class CommitListViewModel {
     this.bottomSpacer = ko.computed(() => (this.rows().length - this.window().end) * H);
 
     this._defaultSelection = ko.computed(() => this._applyDefaultSelection());
-    // Fill the viewport when the loaded commits do not reach the bottom yet. Only when the list
-    // grew: a reload with the same commits must not trigger yet another load (endless loop).
+    // a selection that becomes null is re-defaulted at once, not on the next graph change
+    repo.selection.subscribe((sel) => {
+      if (sel == null) ko.ignoreDependencies(() => this._applyDefaultSelection());
+    });
+    // Fill the viewport when the loaded commits do not reach the bottom yet. Only when the length
+    // changed: a reload with the same commits must not trigger yet another load (endless loop).
     let lastLength = 0;
     this.rows.subscribe((rows) => {
-      const grew = rows.length > lastLength;
+      if (rows.length === lastLength) return;
       lastLength = rows.length;
-      if (grew) setTimeout(() => this._loadMoreIfNearEnd(), 0);
+      setTimeout(() => this._loadMoreIfNearEnd(), 0);
+    });
+    // Out of order /gitlog answers can leave an older, shorter page of history loaded last: the
+    // short page looks like the end of history, so reload it at the current limit.
+    let lastNodeCount = 0;
+    repo.graph.nodes.subscribe((nodes) => {
+      const graph = repo.graph;
+      if (nodes.length < lastNodeCount && nodes.length < graph.limit.peek()) {
+        graph.loadNodesFromApi();
+      }
+      lastNodeCount = nodes.length;
     });
   }
 
@@ -274,7 +288,9 @@ class CommitListViewModel {
     if (current === 'WIP') {
       if (!hasWip) repo.selection(headSha);
     } else if (current) {
-      if (!nodes.some((n) => n.sha1 === current)) {
+      // A commit known to the graph stays selected even while it is not loaded (placeholder node):
+      // the details panel offers to load it. Only a commit the graph does not know is replaced.
+      if (!repo.graph.nodesById[current]) {
         // Wait until something can be selected, a not yet loaded graph must not reset anything.
         if (headSha || nodes.length) {
           repo.selection(headSha);
@@ -355,8 +371,10 @@ class CommitListViewModel {
   _loadMoreIfNearEnd() {
     const el = this.rowsEl;
     if (!el || !el.clientHeight || !this.rows().length) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_END)
-      this.repo.graph.scrolledToEnd();
+    if (el.scrollHeight - el.scrollTop - el.clientHeight >= NEAR_END) return;
+    // a page shorter than the limit means the end of history was reached: nothing more to load
+    const graph = this.repo.graph;
+    if (graph.nodes.peek().length >= graph.limit.peek()) graph.scrolledToEnd();
   }
 
   onKeyDown(e) {

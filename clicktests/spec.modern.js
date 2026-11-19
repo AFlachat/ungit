@@ -21,6 +21,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 2 }, // 8: sidebar
       { bare: false, initCommits: 3 }, // 9: context menus and drag & drop
       { bare: false, initCommits: 3 }, // 10: squash
+      { bare: false, initCommits: 60 }, // 11: history loading
     ]);
   });
 
@@ -119,18 +120,91 @@ describe('[MODERN] shell', () => {
     const nodes = () =>
       environment.page.evaluate(() => ungit.__app.content().repository().graph.nodes().length);
     for (let i = 0; i < 20 && (await nodes()) < 150; i++) {
+      const before = await nodes();
       await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = el.scrollHeight));
-      await environment.wait(700);
+      await environment.page.waitForFunction(
+        (n) => ungit.__app.content().repository().graph.nodes().length > n,
+        {},
+        before
+      );
     }
     const loaded = await nodes();
     if (loaded < 150) throw new Error(`expected 150 loaded nodes, got ${loaded}`);
     await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = el.scrollHeight));
-    await environment.wait(300);
+    await environment.waitForElementVisible(rowSel('Init Commit 0'));
     const domRows = await environment.page.$$eval('.modern-row', (els) => els.length);
     if (domRows >= 80) throw new Error(`expected < 80 DOM rows, got ${domRows}`);
-    await environment.waitForElementVisible(rowSel('Init Commit 0'));
     await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = 0));
     await environment.waitForElementVisible(rowSel('Init Commit 149'));
+  });
+
+  describe('history loading', () => {
+    const repo = () => testRepoPaths[11];
+    const graphValue = (fn) =>
+      environment.page.evaluate(
+        (body) => new Function('g', body)(ungit.__app.content().repository().graph),
+        fn
+      );
+    const notLoaded = '[data-ta-container="commit-not-loaded"]';
+    let sha0;
+
+    it('fills the viewport with commits without scrolling', async () => {
+      await environment.openUngit(repo());
+      await environment.waitForElementVisible('.modern-row');
+      await environment.page.waitForFunction(() => {
+        const el = document.querySelector('.modern-rows');
+        return el && el.scrollTop === 0 && el.scrollHeight > el.clientHeight + 28;
+      });
+    });
+
+    it('keeps a not loaded commit selected and loads it on demand', async () => {
+      sha0 = execFileSync('git', ['rev-list', '--max-parents=0', 'HEAD'], { cwd: repo() })
+        .toString()
+        .trim();
+      const isInited = `const n = g.nodesById['${sha0}']; return !!(n && n.isInited);`;
+      if (await graphValue(isInited)) throw new Error('the oldest commit should not be loaded');
+      await environment.backgroundAction('POST', '/api/branches', {
+        path: repo(),
+        name: 'old',
+        sha1: sha0,
+      });
+      await environment.ensureRedraw();
+      await environment.click('.modern-sidebar-item[data-ta-name="old"]');
+      await environment.waitForElementVisible(notLoaded);
+      if ((await selectedSha()) !== sha0) throw new Error('the branch commit should be selected');
+      // a graph reload must not move the selection away
+      await environment.ensureRedraw();
+      await environment.waitForElementVisible(notLoaded);
+      if ((await selectedSha()) !== sha0) throw new Error('selection lost on reload');
+      await environment.click('[data-ta-clickable="load-more-commits"]');
+      await environment.waitForElementHidden(notLoaded);
+      await environment.waitForElementVisible('[data-ta-container="commit-details"]');
+      const title = await environment.page.$eval(
+        '[data-ta-container="commit-title"]',
+        (el) => el.textContent
+      );
+      if (title !== 'Init Commit 0') throw new Error(`unexpected title ${title}`);
+      if ((await selectedSha()) !== sha0) throw new Error('selection lost after loading');
+    });
+
+    it('reloads when a shorter, out of order page of history was applied last', async () => {
+      const total = await graphValue('return g.nodes().length;');
+      if (total !== 60) throw new Error(`expected 60 loaded nodes, got ${total}`);
+      // what an older /gitlog answer arriving after the newer one does
+      await graphValue('g._apiCache = undefined; g.nodes(g.nodes().slice(0, 25));');
+      await environment.page.waitForFunction(
+        () => ungit.__app.content().repository().graph.nodes().length === 60
+      );
+    });
+
+    it('stops loading at the end of history', async () => {
+      const limit = await graphValue('return g.limit();');
+      await environment.page.$eval('.modern-rows', (el) => (el.scrollTop = el.scrollHeight));
+      await environment.waitForElementVisible(rowSel('Init Commit 0'));
+      await environment.wait(1500); // nothing must happen: give a load the time to start
+      const after = await graphValue('return g.limit();');
+      if (after !== limit) throw new Error(`limit raised from ${limit} to ${after} at the end`);
+    });
   });
 
   describe('right panel', () => {
@@ -347,6 +421,23 @@ describe('[MODERN] shell', () => {
       environment.page.off('request', onRequest);
       if (urls.length !== 1) throw new Error(`expected 1 /diff request, got ${urls.length}`);
       await environment.click('[data-ta-clickable="diff-close"]');
+      await environment.waitForElementVisible(listSel);
+    });
+
+    it('closes the diff of a WIP file once it is committed', async () => {
+      await environment.createTestFile(`${dir()}/wipdiff.txt`, dir());
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="wip-row"]');
+      const wipFile = '[data-ta-container="modern-right"] .modern-file[data-ta-file="wipdiff.txt"]';
+      await environment.click(wipFile);
+      await environment.waitForElementVisible(diffSel);
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: dir(),
+        message: 'Commit wipdiff',
+        files: [{ name: 'wipdiff.txt' }],
+      });
+      await environment.waitForElementHidden('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementHidden(diffSel);
       await environment.waitForElementVisible(listSel);
     });
   });
