@@ -2,6 +2,7 @@ const ko = require('knockout');
 const octicons = require('octicons');
 const components = require('ungit-components');
 const storage = require('ungit-storage');
+const { aheadBehind } = require('./aheadBehind');
 
 components.register('sidebar', (args) => new SidebarViewModel(args));
 
@@ -176,16 +177,9 @@ class SidebarViewModel {
     const node = ref.node();
     const remoteNode = remoteRef && remoteRef.node();
     if (!node || !remoteNode || node === remoteNode) return null;
-    // the path ends in the common ancestor, unless history was not loaded far enough
-    const count = (from, to) => {
-      const path = from.getPathToCommonAncestor(to);
-      const last = path[path.length - 1];
-      return last && to.isAncestor(last) ? path.length - 1 : null;
-    };
-    const ahead = count(node, remoteNode);
-    const behind = count(remoteNode, node);
-    if (ahead === null || behind === null || (!ahead && !behind)) return null;
-    return { ahead, behind };
+    const counts = aheadBehind(node, remoteNode, this.repo.graph.nodesById);
+    if (!counts || (!counts.ahead && !counts.behind)) return null;
+    return counts;
   }
 
   toggleSection(section) {
