@@ -13,8 +13,7 @@ class StagingPanelViewModel {
     this.unstagedFiles = ko.computed(() => files().filter((f) => f.editState() !== 'staged'));
     this.hasFiles = ko.computed(() => files().length > 0);
     this.branchName = ko.computed(() => {
-      const ref = this.repo.graph.checkedOutRef && this.repo.graph.checkedOutRef();
-      return ref ? ref.displayName : '';
+      return this.repo.graph.checkedOutBranch ? this.repo.graph.checkedOutBranch() || '' : '';
     });
     this.commitLabel = ko.computed(() => {
       const n = this.stagedFiles().length;
