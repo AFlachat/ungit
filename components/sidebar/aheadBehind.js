@@ -10,7 +10,8 @@ const walk = (tip, nodesById) => {
     const sha1 = stack.pop();
     if (seen.has(sha1)) continue;
     const node = nodesById[sha1];
-    if (!node) {
+    // an unloaded parent is a placeholder node (not inited, no parents): not a known commit
+    if (!node || !node.isInited) {
       missing = true;
       continue;
     }
