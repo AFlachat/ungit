@@ -32,24 +32,41 @@ const hashString = (s) => {
   return Math.abs(h);
 };
 
-const lanesSvg = (row, width) => {
-  const { dot, up, down, pass } = row.lanes;
+const Y = [0, H / 2, H]; // TOP, MID, BOTTOM
+
+// GitKraken-like edges: straight lines in a column, and rounded elbows (vertical + horizontal)
+// where an edge leaves or joins a commit in another column.
+const segPath = ({ c1, y1, c2, y2 }) => {
+  const x1 = lx(c1);
+  const x2 = lx(c2);
+  if (c1 === c2) return `M${x1} ${Y[y1]} V${Y[y2]}`;
+  const dir = x2 > x1 ? 1 : -1;
+  const r = Math.min(8, Math.abs(x2 - x1), H / 2);
   const mid = H / 2;
-  const stroke = (color, extra = '') => `stroke="${color}" stroke-width="2" fill="none" ${extra}`;
+  if (y1 === 0 && y2 === 1) {
+    // comes down a column and turns into a dot
+    return `M${x1} 0 V${mid - r} Q${x1} ${mid} ${x1 + dir * r} ${mid} H${x2}`;
+  }
+  if (y1 === 1 && y2 === 2) {
+    // leaves a dot sideways and turns down into a column
+    return `M${x1} ${mid} H${x2 - dir * r} Q${x2} ${mid} ${x2} ${mid + r} V${H}`;
+  }
+  const ym = (Y[y1] + Y[y2]) / 2;
+  return `M${x1} ${Y[y1]} C${x1} ${ym} ${x2} ${ym} ${x2} ${Y[y2]}`;
+};
+
+const lanesSvg = (row, width) => {
+  const { dot, segs } = row.lanes;
+  const mid = H / 2;
   let p = '';
-  pass.forEach((l) => (p += `<path d="M${lx(l)} 0 V${H}" ${stroke(laneColor(l))}/>`));
-  up.forEach((l) => {
-    p +=
-      l === dot
-        ? `<path d="M${lx(l)} 0 V${mid}" ${stroke(laneColor(l))}/>`
-        : `<path d="M${lx(l)} 0 C${lx(l)} ${mid} ${lx(dot)} ${mid * 0.6} ${lx(dot)} ${mid}" ${stroke(laneColor(l))}/>`;
-  });
-  down.forEach((l) => {
-    p +=
-      l === dot
-        ? `<path d="M${lx(l)} ${mid} V${H}" ${stroke(laneColor(l), row.wip ? 'stroke-dasharray="3 3"' : '')}/>`
-        : `<path d="M${lx(dot)} ${mid} C${lx(dot)} ${H * 0.85} ${lx(l)} ${mid} ${lx(l)} ${H}" ${stroke(laneColor(Math.max(l, dot)))}/>`;
-  });
+  // curves first so that straight column lines are drawn over their start
+  segs
+    .slice()
+    .sort((a, b) => (a.c1 === a.c2) - (b.c1 === b.c2))
+    .forEach((seg) => {
+      const dash = seg.dashed ? ' stroke-dasharray="3 3"' : '';
+      p += `<path d="${segPath(seg)}" stroke="${seg.color}" stroke-width="2" fill="none"${dash}/>`;
+    });
   const col = laneColor(dot);
   if (row.wip) {
     p += `<circle cx="${lx(dot)}" cy="${mid}" r="6" fill="#1b1d23" stroke="${col}" stroke-width="2" stroke-dasharray="3 2"/>`;

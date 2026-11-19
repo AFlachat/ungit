@@ -1,92 +1,105 @@
 const assert = require('assert');
-const { computeLanes, laneColor } = require('../components/commitList/lanes');
+const { computeLanes, laneColor, TOP, MID, BOTTOM } = require('../components/commitList/lanes');
 
 const c = (sha1, ...parents) => ({ sha1, parents });
+const dots = (rows) => rows.map((r) => r.dot);
+const straight = (seg) => seg.c1 === seg.c2;
 
-describe('[lanes]', () => {
-  it('linear history stays on lane 0', () => {
+describe('[lanes] straight branches', () => {
+  it('linear history stays in column 0 with straight edges', () => {
     const r = computeLanes([c('C', 'B'), c('B', 'A'), c('A')]);
-    r.forEach((row) => assert.strictEqual(row.dot, 0));
-    assert.deepStrictEqual(r[0].up, []);
-    assert.deepStrictEqual(r[0].down, [0]);
-    assert.deepStrictEqual(r[2].down, []);
-    assert.deepStrictEqual(r[1].up, [0]);
+    assert.deepStrictEqual(dots(r), [0, 0, 0]);
+    r.forEach((row) => row.segs.forEach((s) => assert(straight(s))));
+    assert.deepStrictEqual(r[0].segs, [
+      { c1: 0, y1: MID, c2: 0, y2: BOTTOM, color: laneColor(0), dashed: false },
+    ]);
+    assert.strictEqual(r[2].segs.length, 1); // only the edge arriving from B
   });
 
-  it('mockup history satisfies topology invariants', () => {
-    const commits = [
-      { sha1: 'WIP', parents: ['b1df1a16'] },
-      c('b1df1a16', 'a7aeb742'),
-      c('9c3e2f04', '4d21b8ec'),
-      c('a7aeb742', 'fc0bc10d'),
-      c('4d21b8ec', 'fc0bc10d'),
-      c('fc0bc10d', 'e12f9a07'),
-      c('e12f9a07', 'a73c34cc', '77ab01c3'),
-      c('77ab01c3', '5ee12d90'),
-      c('a73c34cc', '775bd2a2'),
-      c('5ee12d90', '775bd2a2'),
-      c('775bd2a2', 'a54462ee'),
-      c('a54462ee', 'e376caa1'),
-      c('e376caa1', '5d2ef890'),
-      c('5d2ef890', '1f0c3aa8'),
-      c('1f0c3aa8'),
-    ];
-    const rows = computeLanes(commits);
-    assert.strictEqual(rows.length, commits.length);
-    const expecting = {}; // lane -> sha, tracked independently from the outputs
-    rows.forEach((row, i) => {
-      const cm = commits[i];
-      const expectedUp = Object.keys(expecting)
-        .map(Number)
-        .filter((l) => expecting[l] === cm.sha1)
-        .sort((a, b) => a - b);
-      assert.deepStrictEqual(row.up, expectedUp, `up of row ${i}`);
-      if (cm.parents.length) {
-        assert.strictEqual(row.down[0], row.dot, `down[0] of row ${i}`);
-        assert.strictEqual(row.down.length, cm.parents.length);
-      }
-      row.up.forEach((l) => delete expecting[l]);
-      row.down.forEach((l, k) => (expecting[l] = cm.parents[k]));
-      assert.ok(row.width > Math.max(row.dot, ...row.up, ...row.down, ...row.pass));
-    });
-    const merge = rows[commits.findIndex((x) => x.sha1 === 'e12f9a07')];
-    assert.strictEqual(new Set(merge.down).size, 2);
-    const fork = rows[commits.findIndex((x) => x.sha1 === 'fc0bc10d')];
-    assert.strictEqual(fork.up.length, 2);
+  it('a fork keeps the first branch child column and bends the other one in', () => {
+    // A and B both branch off P
+    const r = computeLanes([c('A', 'P'), c('B', 'P'), c('P')]);
+    assert.deepStrictEqual(dots(r), [0, 1, 0]);
+    const bend = r[2].segs.find((s) => !straight(s));
+    assert.deepStrictEqual(
+      [bend.c1, bend.y1, bend.c2, bend.y2],
+      [1, TOP, 0, MID],
+      'B bends into P on P row'
+    );
   });
 
-  it('octopus merge uses 3 distinct lanes, first is dot', () => {
-    const r = computeLanes([c('M', 'A', 'B', 'C'), c('A'), c('B'), c('C')]);
-    assert.strictEqual(new Set(r[0].down).size, 3);
-    assert.strictEqual(r[0].down[0], r[0].dot);
+  it('a merged side branch stays straight in its own column', () => {
+    // M merges S into main; S and A both come from B
+    const r = computeLanes([c('M', 'A', 'S'), c('S', 'B'), c('A', 'B'), c('B')]);
+    assert.deepStrictEqual(dots(r), [0, 1, 0, 0]);
+    const out = r[0].segs.find((s) => !straight(s));
+    assert.deepStrictEqual(
+      [out.c1, out.y1, out.c2, out.y2],
+      [0, MID, 1, BOTTOM],
+      'merge edge leaves M on its row'
+    );
+    // row of S: S line continues down column 1, main line passes in column 0
+    assert(r[2].segs.some((s) => s.c1 === 1 && s.c2 === 1 && s.y1 === TOP && s.y2 === BOTTOM));
   });
 
-  it('parent missing from list does not crash', () => {
-    const r = computeLanes([c('B', 'A', 'X')]);
-    assert.deepStrictEqual(r[0].down, [0, 1]);
+  it('long side branch keeps its column while main moves on', () => {
+    const commits = [c('M', 'm3', 's3')];
+    commits.push(c('s3', 's2'), c('m3', 'm2'), c('s2', 's1'), c('m2', 'm1'), c('s1', 'base'));
+    commits.push(c('m1', 'base'), c('base'));
+    const r = computeLanes(commits);
+    const byName = Object.fromEntries(commits.map((x, i) => [x.sha1, r[i].dot]));
+    ['s3', 's2', 's1'].forEach((s) => assert.strictEqual(byName[s], 1, s));
+    ['M', 'm3', 'm2', 'm1', 'base'].forEach((m) => assert.strictEqual(byName[m], 0, m));
   });
 
-  it('two tips sharing a parent converge', () => {
-    const r = computeLanes([c('T1', 'P'), c('T2', 'P'), c('P')]);
-    assert.strictEqual(r[1].dot, 1);
-    assert.deepStrictEqual(r[1].down, [1]);
-    assert.deepStrictEqual(r[2].up, [0, 1]);
+  it('does not take a forbidden column', () => {
+    // m merges c; d and a are branch children of c placed between m and c:
+    // the merge edge of c would cross their dots, so c needs a fresh column.
+    const r = computeLanes([c('m', 'a', 'c'), c('d', 'c'), c('a', 'c'), c('c')]);
+    assert.deepStrictEqual(dots(r), [0, 1, 0, 2]);
   });
 
-  it('reuses lanes after merges', () => {
+  it('frees and reuses columns', () => {
     const commits = [];
-    // each iteration: a merge (2 parents) followed by the side branch commit, then the base
-    for (let i = 0; i < 200; i++) {
-      commits.push(c(`m${i}`, `m${i + 1}`, `s${i}`));
-      commits.push(c(`s${i}`, `m${i + 1}`));
+    for (let k = 0; k < 200; k++) {
+      commits.push(c(`m${k}`, `a${k}`, `s${k}`), c(`s${k}`, `a${k}`), c(`a${k}`, `m${k + 1}`));
     }
     commits.push(c('m200'));
     const r = computeLanes(commits);
-    assert.ok(Math.max(...r.map((x) => x.width)) <= 3);
+    assert(Math.max(...r.map((x) => x.width)) <= 3);
   });
 
-  it('laneColor cycles', () => {
+  it('parents outside the list keep their edges running to the bottom', () => {
+    const r = computeLanes([c('A', 'X', 'Y'), c('B', 'X')]);
+    assert.deepStrictEqual(dots(r), [0, 1]);
+    // row B: A's first-parent line in column 0 and the merge line towards Y both pass through
+    const verticals = r[1].segs.filter((s) => straight(s) && s.y1 === TOP && s.y2 === BOTTOM);
+    assert(verticals.length >= 2);
+  });
+
+  it('octopus merge gets one edge per parent', () => {
+    const r = computeLanes([c('M', 'A', 'B', 'C'), c('A'), c('B'), c('C')]);
+    assert.strictEqual(r[0].segs.filter((s) => s.y1 === MID).length, 3);
+    assert.strictEqual(new Set(r.map((x) => x.dot)).size, 3);
+  });
+
+  it('marks the WIP edge as dashed', () => {
+    const r = computeLanes([c('WIP', 'H'), c('H')]);
+    assert.strictEqual(r[0].segs[0].dashed, true);
+    assert.deepStrictEqual(dots(r), [0, 0]);
+  });
+
+  it('stays fast on a large history', () => {
+    const commits = [];
+    for (let k = 0; k < 2000; k++) {
+      commits.push(c(`m${k}`, `a${k}`, `s${k}`), c(`s${k}`, `a${k}`), c(`a${k}`, `m${k + 1}`));
+    }
+    const t = Date.now();
+    computeLanes(commits);
+    assert(Date.now() - t < 1500, `took ${Date.now() - t}ms`);
+  });
+
+  it('cycles the palette', () => {
     assert.strictEqual(laneColor(5), laneColor(0));
-    assert.strictEqual(laneColor(0), '#4c9aff');
   });
 });
