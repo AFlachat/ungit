@@ -19,6 +19,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 1 }, // 6: merge conflict
       { bare: false }, // 7: diff view
       { bare: false, initCommits: 2 }, // 8: sidebar
+      { bare: false, initCommits: 3 }, // 9: context menus and drag & drop
     ]);
   });
 
@@ -435,6 +436,89 @@ describe('[MODERN] shell', () => {
         {},
         master
       );
+    });
+  });
+
+  describe('context menus and drag & drop', () => {
+    const ctx = '[data-ta-container="context-menu"]';
+    const action = (id) => `${ctx} [data-ta-action="${id}"]`;
+    const pill = (name) => `.modern-ref[data-ta-name="${name}"]`;
+    const rightClick = async (selector) => {
+      const el = await environment.waitForElementVisible(selector);
+      await el.click({ button: 'right' });
+      await environment.waitForElementVisible(ctx);
+    };
+
+    // Drags with the real mouse (puppeteer 25 dispatches native HTML5 drag events itself).
+    const dragTo = async (fromSelector, toSelector) => {
+      const from = await (await environment.waitForElementVisible(fromSelector)).boundingBox();
+      const to = await (await environment.waitForElementVisible(toSelector)).boundingBox();
+      const { mouse } = environment.page;
+      await mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await mouse.down();
+      await mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 3 });
+      await mouse.move(to.x + 300, to.y + to.height / 2, { steps: 10 });
+      await mouse.up();
+    };
+
+    it('resets softly to a commit from the commit menu', async () => {
+      await environment.openUngit(testRepoPaths[9]);
+      for (const n of [0, 1, 2])
+        await environment.waitForElementVisible(rowSel(`Init Commit ${n}`));
+      await rightClick(rowSel('Init Commit 1'));
+      await environment.page.hover(action('reset'));
+      await environment.click(action('reset-soft'));
+      await environment.waitForElementHidden(ctx);
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.page.waitForFunction(
+        () => ungit.__app.content().repository().graph.HEAD().title() === 'Init Commit 1'
+      );
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible('[data-ta-file]');
+    });
+
+    it('closes the menu on Escape and on outside click', async () => {
+      await rightClick(rowSel('Init Commit 0'));
+      await environment.press('Escape');
+      await environment.waitForElementHidden(ctx);
+      await rightClick(rowSel('Init Commit 0'));
+      await environment.page.mouse.click(5, 5);
+      await environment.waitForElementHidden(ctx);
+    });
+
+    it('creates a branch on a commit from the commit menu', async () => {
+      await rightClick(rowSel('Init Commit 0'));
+      await environment.click(action('create-branch'));
+      await environment.insert('.modal-dialog input.form-control', 'from-menu');
+      await environment.click('.modal-dialog .btn-primary');
+      await environment.waitForElementVisible(`${rowSel('Init Commit 0')} ${pill('from-menu')}`);
+    });
+
+    it('moves a branch by dragging its pill onto a commit row', async () => {
+      const sha0 = await environment.page.$eval(rowSel('Init Commit 0'), (e) =>
+        e.getAttribute('data-ta-sha')
+      );
+      await environment.backgroundAction('POST', '/api/branches', {
+        path: testRepoPaths[9],
+        name: 'feature',
+        sha1: sha0,
+      });
+      await environment.ensureRedraw();
+      await environment.waitForElementVisible(`${rowSel('Init Commit 0')} ${pill('feature')}`);
+      await dragTo(pill('feature'), rowSel('Init Commit 1'));
+      await environment.waitForElementVisible(`${ctx} [data-ta-action="move-ref"]`);
+      await environment.click(action('move-ref'));
+      await environment.waitForElementVisible(`${rowSel('Init Commit 1')} ${pill('feature')}`);
+      await environment.waitForElementHidden(`${rowSel('Init Commit 0')} ${pill('feature')}`);
+    });
+
+    it('deletes a branch from the sidebar menu', async () => {
+      const item = '.modern-sidebar-item[data-ta-name="feature"]';
+      await rightClick(item);
+      await environment.click(action('delete-ref'));
+      await environment.click('.modal-dialog .btn-primary');
+      await environment.waitForElementHidden(item);
+      await environment.waitForElementHidden(pill('feature'));
     });
   });
 });

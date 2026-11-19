@@ -22,6 +22,8 @@ class SidebarViewModel {
   constructor({ repo }) {
     this.repo = repo;
     this.filter = ko.observable('');
+    this.onContextMenu = this.onContextMenu.bind(this);
+    this.onDragStart = this.onDragStart.bind(this);
     this.filterIcon = octicons.search.toSVG({ height: 12 });
     this.icons = {
       local: octicons['git-branch'].toSVG({ height: 14 }),
@@ -203,6 +205,18 @@ class SidebarViewModel {
 
   open(item) {
     if (item.ref) item.ref.checkout();
+  }
+
+  onContextMenu(item, event) {
+    if (!item.ref) return true;
+    this.repo.actions.openRefMenu(event.clientX, event.clientY, item.ref);
+    return false;
+  }
+
+  onDragStart(item, event) {
+    if (!item.ref || !item.draggable) return true;
+    this.repo.actions.startDrag(item.ref, event);
+    return true;
   }
 
   updateNode(parentElement) {

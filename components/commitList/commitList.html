@@ -18,6 +18,13 @@
       data-bind="
         css: { sel: $parent.isSelected(row), wip: row.wip },
         click: $parent.select,
+        event: {
+          contextmenu: $parent.onContextMenu,
+          dragstart: $parent.onDragStart,
+          dragover: $parent.onDragOver,
+          dragleave: $parent.onDragLeave,
+          drop: $parent.onDrop
+        },
         attr: {
           'data-ta-node-title': row.wip ? null : row.title,
           'data-ta-sha': row.sha1,

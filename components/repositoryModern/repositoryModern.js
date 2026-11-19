@@ -5,6 +5,7 @@ const programEvents = require('ungit-program-events');
 const storage = require('ungit-storage');
 const { editGitignore } = require('../repository/gitignore');
 const GraphActions = require('../graph/git-graph-actions');
+const ModernActions = require('./actions');
 
 components.register(
   'repositoryModern',
@@ -111,6 +112,8 @@ class RepositoryModernViewModel {
     this.commitList = components.create('commitList', { repo: this });
     this.commitDetails = components.create('commitDetails', { repo: this });
     this.sidebar = components.create('sidebar', { repo: this });
+    this.contextMenu = components.create('contextMenu', { repo: this });
+    this.actions = new ModernActions(this);
     this.diffView = components.create('diffView', { repo: this });
     this.stagingPanel = this.isBareDir ? null : components.create('stagingPanel', { repo: this });
 

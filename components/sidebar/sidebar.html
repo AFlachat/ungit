@@ -35,7 +35,11 @@
               draggable: draggable ? 'true' : null
             },
             click: $root.activate.bind($root),
-            event: { dblclick: $root.open.bind($root) }"
+            event: {
+              dblclick: $root.open.bind($root),
+              contextmenu: $root.onContextMenu,
+              dragstart: $root.onDragStart
+            }"
         >
           <span class="modern-sb-ico" data-bind="html: $parents[1].icon"></span>
           <span class="modern-sb-nm" data-bind="text: $data.label || name"></span>

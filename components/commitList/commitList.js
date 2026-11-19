@@ -124,6 +124,7 @@ class Row {
         const current = !!ref.isLocalBranch && ref.current();
         const c = tag ? '#d29922' : remote ? '#8b92a0' : color;
         return {
+          ref,
           name: ref.localRefName,
           tag,
           remote,
@@ -145,6 +146,9 @@ class CommitListViewModel {
   constructor({ repo }) {
     this.repo = repo;
     this.select = this.select.bind(this); // used as a click handler inside foreach
+    ['onContextMenu', 'onDragStart', 'onDragOver', 'onDragLeave', 'onDrop'].forEach((k) => {
+      this[k] = this[k].bind(this);
+    });
     this.rowHeight = H;
     this.scrollTop = ko.observable(0);
     this.viewportHeight = ko.observable(0);
@@ -206,6 +210,47 @@ class CommitListViewModel {
       lastLength = rows.length;
       if (grew) setTimeout(() => this._loadMoreIfNearEnd(), 0);
     });
+  }
+
+  // Right-click on a ref pill opens the ref menu, anywhere else on a commit row the commit menu.
+  onContextMenu(row, event) {
+    if (row.wip) return false;
+    const pillEl = event.target.closest && event.target.closest('.modern-ref');
+    const pill = pillEl && ko.dataFor(pillEl);
+    if (pill && pill.ref) this.repo.actions.openRefMenu(event.clientX, event.clientY, pill.ref);
+    else this.repo.actions.openCommitMenu(event.clientX, event.clientY, row.node);
+    return false;
+  }
+
+  onDragStart(row, event) {
+    const pillEl = event.target.closest && event.target.closest('.modern-ref[draggable="true"]');
+    const pill = pillEl && ko.dataFor(pillEl);
+    if (!pill || !pill.ref) return true;
+    this.repo.actions.startDrag(pill.ref, event);
+    return true; // the default action starts the drag
+  }
+
+  onDragOver(row, event) {
+    if (!this.repo.actions.dragRef || row.wip) return true;
+    event.dataTransfer.dropEffect = 'move';
+    event.currentTarget.classList.add('drop-target');
+    return false; // preventDefault: this row accepts the drop
+  }
+
+  onDragLeave(row, event) {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      event.currentTarget.classList.remove('drop-target');
+    }
+    return true;
+  }
+
+  onDrop(row, event) {
+    const actions = this.repo.actions;
+    const ref = actions.dragRef;
+    if (!ref || row.wip) return true;
+    actions.endDrag();
+    actions.openDropMenu(event.clientX, event.clientY, ref, row.node);
+    return false;
   }
 
   _wipFiles() {
