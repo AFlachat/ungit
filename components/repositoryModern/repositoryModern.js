@@ -46,6 +46,38 @@ class RepositoryModernViewModel {
     // null | { name, oldName?, sha1 ('' for WIP), type: 'text'|'image' }
     this.activeFile = ko.observable(null);
 
+    // files of the current selection, in the order the right panel shows them
+    this.fileList = ko.computed(() => {
+      const num = (v) => Number(String(v == null ? '' : v).replace(/[+-]/, '')) || 0;
+      const sel = this.selection();
+      if (sel === 'WIP') {
+        const files = this.staging.files ? this.staging.files() : [];
+        const mk = (f) => ({
+          name: f.name(),
+          oldName: f.oldName(),
+          sha1: '',
+          type: f.fileType(),
+          additions: num(f.additions()),
+          deletions: num(f.deletions()),
+        });
+        return [
+          ...files.filter((f) => f.editState() !== 'staged'),
+          ...files.filter((f) => f.editState() === 'staged'),
+        ].map(mk);
+      }
+      this.graph.nodes(); // dependency: nodesById is a plain map
+      const node = sel ? this.graph.nodesById[sel] : null;
+      const diffs = node && node.commitComponent ? node.commitComponent.fileLineDiffs() : null;
+      return (diffs || []).map((f) => ({
+        name: f.fileName,
+        oldName: f.oldFileName,
+        sha1: sel,
+        type: f.type,
+        additions: num(f.additions),
+        deletions: num(f.deletions),
+      }));
+    });
+
     this.isPulling = false;
     this.canPull = ko.computed(() => {
       this.graph.refs(); // dependency: remote refs are looked up in a plain map
@@ -65,6 +97,7 @@ class RepositoryModernViewModel {
 
     this.commitList = components.create('commitList', { repo: this });
     this.commitDetails = components.create('commitDetails', { repo: this });
+    this.diffView = components.create('diffView', { repo: this });
     this.stagingPanel = this.isBareDir ? null : components.create('stagingPanel', { repo: this });
 
     this.fetchIcon = octicons.download.toSVG({ height: 16 });

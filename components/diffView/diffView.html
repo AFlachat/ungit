@@ -1,0 +1,68 @@
+<div class="modern-diffview" data-ta-container="modern-diff" data-bind="visible: repo.activeFile">
+  <!-- ko if: repo.activeFile -->
+  <div class="modern-diff-bar">
+    <div class="modern-diff-file">
+      <span class="modern-diff-dir" data-bind="text: dirName"></span
+      ><span data-bind="text: baseName"></span>
+    </div>
+    <div class="modern-diff-stat">
+      <span class="modern-a" data-bind="text: '+' + additions()"></span>
+      <span class="modern-d" data-bind="text: '−' + deletions()"></span>
+    </div>
+    <div class="modern-spacer"></div>
+    <div class="modern-seg">
+      <button
+        type="button"
+        data-ta-clickable="diff-mode-hunk"
+        data-bind="click: function () { mode('hunk'); }, css: { on: mode() === 'hunk' }"
+      >
+        Hunk
+      </button>
+      <button
+        type="button"
+        data-ta-clickable="diff-mode-inline"
+        data-bind="click: function () { mode('inline'); }, css: { on: mode() === 'inline' }"
+      >
+        Inline
+      </button>
+      <button
+        type="button"
+        data-ta-clickable="diff-mode-split"
+        data-bind="click: function () { mode('split'); }, css: { on: mode() === 'split' }"
+      >
+        Split
+      </button>
+    </div>
+    <button
+      type="button"
+      class="modern-tog"
+      title="Ignore whitespace"
+      data-ta-clickable="diff-whitespace"
+      data-bind="click: whiteSpace.toggle, css: { on: whiteSpace.value }"
+    >
+      &#9251; Whitespace
+    </button>
+    <button
+      type="button"
+      class="modern-tog"
+      title="Word wrap"
+      data-ta-clickable="diff-wrap"
+      data-bind="click: wordWrap.toggle, css: { on: wordWrap.value }"
+    >
+      &#8617; Wrap
+    </button>
+    <button
+      type="button"
+      class="modern-close-x"
+      title="Back to graph (Esc)"
+      data-ta-clickable="diff-close"
+      data-bind="click: close"
+    >
+      &#10005;
+    </button>
+  </div>
+  <div class="modern-diff-body">
+    <!-- ko if: diff --><!-- ko component: diff --><!-- /ko --><!-- /ko -->
+  </div>
+  <!-- /ko -->
+</div>

@@ -1,0 +1,169 @@
+@import '../repositoryModern/theme.less';
+
+.modern-diffview {
+  position: absolute;
+  inset: 0;
+  background: @modern-bg;
+  display: flex;
+  flex-direction: column;
+  color: @modern-text;
+  z-index: 2;
+
+  .modern-diff-bar {
+    flex: none;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-bottom: 1px solid @modern-border;
+    background: @modern-bg-2;
+  }
+  .modern-spacer {
+    flex: 1;
+  }
+  .modern-diff-file {
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+  }
+  .modern-diff-dir {
+    color: @modern-muted;
+  }
+  .modern-diff-stat {
+    font-size: 12px;
+    .modern-a {
+      color: @modern-green;
+    }
+    .modern-d {
+      color: @modern-red;
+    }
+  }
+  .modern-seg {
+    display: flex;
+    background: @modern-bg;
+    border: 1px solid @modern-border;
+    border-radius: 6px;
+    padding: 2px;
+    button {
+      border: 0;
+      background: transparent;
+      padding: 3px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: @modern-muted;
+      font-size: 12px;
+      &.on {
+        background: @modern-bg-3;
+        color: #fff;
+        box-shadow: 0 0 0 1px @modern-border;
+      }
+    }
+  }
+  .modern-tog {
+    border: 1px solid @modern-border;
+    background: transparent;
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 12px;
+    color: @modern-muted;
+    cursor: pointer;
+    &.on {
+      color: @modern-accent;
+      border-color: @modern-accent;
+    }
+  }
+  .modern-close-x {
+    border: 0;
+    background: transparent;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: @modern-muted;
+    font-size: 16px;
+    &:hover {
+      background: @modern-bg-hover;
+      color: #fff;
+    }
+  }
+
+  .modern-diff-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+  }
+
+  // diff2html dark overrides
+  .d2h-wrapper,
+  .d2h-file-wrapper,
+  .d2h-file-diff,
+  .d2h-diff-table,
+  .d2h-file-side-diff {
+    background: @modern-bg;
+    color: @modern-text;
+    border-color: @modern-border;
+  }
+  .d2h-file-wrapper {
+    border: 0;
+    margin: 0;
+  }
+  .d2h-file-header {
+    display: none;
+  }
+  .d2h-code-line,
+  .d2h-code-side-line,
+  .d2h-code-line-ctn {
+    background: transparent;
+    color: @modern-text;
+  }
+  .d2h-code-linenumber,
+  .d2h-code-side-linenumber {
+    background: @modern-bg-2;
+    color: @modern-faint;
+    border-color: @modern-border;
+  }
+  .d2h-ins,
+  .d2h-ins .d2h-code-line-ctn {
+    background: rgba(63, 185, 80, 0.14);
+  }
+  .d2h-ins.d2h-code-linenumber,
+  .d2h-ins.d2h-code-side-linenumber {
+    background: rgba(63, 185, 80, 0.32);
+    color: #b8e6c0;
+  }
+  .d2h-del,
+  .d2h-del .d2h-code-line-ctn {
+    background: rgba(248, 81, 73, 0.14);
+  }
+  .d2h-del.d2h-code-linenumber,
+  .d2h-del.d2h-code-side-linenumber {
+    background: rgba(248, 81, 73, 0.32);
+    color: #f2c0bd;
+  }
+  .d2h-info,
+  .d2h-info .d2h-code-line-ctn {
+    background: @modern-bg-3;
+    color: @modern-muted;
+    border-color: @modern-border;
+  }
+  .d2h-emptyplaceholder {
+    background: @modern-bg-2;
+    border-color: @modern-border;
+  }
+  ins,
+  .d2h-code-line ins {
+    background: rgba(63, 185, 80, 0.4);
+    color: inherit;
+  }
+  del,
+  .d2h-code-line del {
+    background: rgba(248, 81, 73, 0.4);
+    color: inherit;
+  }
+  .load-more {
+    padding: 10px 0;
+    text-align: center;
+  }
+}

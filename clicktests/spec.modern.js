@@ -17,6 +17,7 @@ describe('[MODERN] shell', () => {
       { bare: false }, // 4: empty repository
       { bare: false, initCommits: 3 }, // 5: right panel
       { bare: false, initCommits: 1 }, // 6: merge conflict
+      { bare: false }, // 7: diff view
     ]);
   });
 
@@ -249,6 +250,79 @@ describe('[MODERN] shell', () => {
       await environment.click('[data-ta-clickable="modern-conflict-continue"]');
       await environment.waitForElementHidden('[data-ta-container="conflict-banner"]');
       await environment.waitForElementVisible(rowSel("Merge branch 'master' into other"));
+    });
+  });
+
+  describe('diff view', () => {
+    const dir = () => testRepoPaths[7];
+    const file = () => `${dir()}/diffy.txt`;
+    const lines = (changed) =>
+      Array.from({ length: 20 }, (_, i) => (i === 9 && changed ? 'changed line' : `line ${i + 1}`))
+        .join('\n')
+        .concat('\n');
+    const diffSel = '[data-ta-container="modern-diff"]';
+    const listSel = '[data-ta-container="modern-commit-list"]';
+    const fileSel = '[data-ta-container="modern-right"] .modern-file[data-ta-file="diffy.txt"]';
+    const codeLines = () => environment.page.$$eval('.d2h-code-line', (els) => els.length);
+    const storedMode = () =>
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins -- runs in the browser
+      environment.page.evaluate(() => window.localStorage.getItem('modernDiffMode'));
+
+    it('opens a file diff over the commit list in hunk mode', async () => {
+      const commit = async (content, message) => {
+        await environment.backgroundAction('POST', '/api/testing/changefile', {
+          path: dir(),
+          file: file(),
+          content,
+        });
+        await environment.backgroundAction('POST', '/api/commit', {
+          path: dir(),
+          message,
+          files: [{ name: 'diffy.txt' }],
+        });
+      };
+      await commit(lines(false), 'Add diffy');
+      await commit(lines(true), 'Change diffy');
+      await environment.openUngit(dir());
+      await environment.waitForElementVisible(rowSel('Change diffy'));
+      await environment.click(rowSel('Change diffy'));
+      await environment.waitForElementVisible(fileSel);
+      await environment.click(fileSel);
+      await environment.waitForElementVisible(diffSel);
+      await environment.waitForElementHidden(listSel);
+      await environment.waitForElementVisible('.d2h-code-line');
+      const n = await codeLines();
+      if (n >= 20) throw new Error(`hunk mode should show < 20 code lines, got ${n}`);
+    });
+
+    it('switches to inline and split and persists the mode', async () => {
+      await environment.click('[data-ta-clickable="diff-mode-inline"]');
+      await environment.page.waitForFunction(
+        () => document.querySelectorAll('.d2h-code-line').length >= 20,
+        { timeout: 10000 }
+      );
+      await environment.click('[data-ta-clickable="diff-mode-split"]');
+      await environment.waitForElementVisible('.d2h-file-side-diff');
+      const stored = await storedMode();
+      if (!/split/.test(stored)) throw new Error(`mode not persisted: ${stored}`);
+      await environment.page.reload();
+      await environment.waitForElementVisible('.modern-repository');
+      await environment.waitForElementVisible(rowSel('Change diffy'));
+      await environment.click(rowSel('Change diffy'));
+      await environment.click(fileSel);
+      await environment.waitForElementVisible('.d2h-file-side-diff');
+      await environment.waitForElementVisible('[data-ta-clickable="diff-mode-split"].on');
+    });
+
+    it('closes with Escape and the close button', async () => {
+      await environment.page.keyboard.press('Escape');
+      await environment.waitForElementHidden(diffSel);
+      await environment.waitForElementVisible(listSel);
+      await environment.click(fileSel);
+      await environment.waitForElementVisible(diffSel);
+      await environment.click('[data-ta-clickable="diff-close"]');
+      await environment.waitForElementHidden(diffSel);
+      await environment.waitForElementVisible(listSel);
     });
   });
 });

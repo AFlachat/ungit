@@ -303,6 +303,7 @@ class CommitListViewModel {
 
   onKeyDown(e) {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    if (this.repo.activeFile()) return; // arrows belong to the diff view while it is open
     if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const t = e.target;
     if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) return;

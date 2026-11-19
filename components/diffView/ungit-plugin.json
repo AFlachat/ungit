@@ -1,0 +1,9 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "diffView": "diffView.html"
+    },
+    "javascript": "diffView.bundle.js",
+    "css": "diffView.css"
+  }
+}

@@ -77,9 +77,13 @@
       data-side="left"
       data-bind="event: { mousedown: startDrag }"
     ></div>
-    <div class="modern-col" data-ta-container="modern-center">
+    <div
+      class="modern-col"
+      data-ta-container="modern-center"
+      data-bind="css: { 'diff-open': activeFile }"
+    >
       <!-- ko component: commitList --><!-- /ko -->
-      <!-- slot: diffView overlay when activeFile() (Task 8) -->
+      <!-- ko component: diffView --><!-- /ko -->
     </div>
     <div
       class="modern-gutter"
