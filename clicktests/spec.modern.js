@@ -24,6 +24,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 3 }, // 10: squash
       { bare: false, initCommits: 60 }, // 11: history loading
       { bare: false, initCommits: 2 }, // 12: pull (upstream, cloned below)
+      { bare: false, initCommits: 3 }, // 13: rewritten selection
     ]);
   });
 
@@ -720,6 +721,24 @@ describe('[MODERN] shell', () => {
       await environment.click('[data-ta-clickable="wip-row"]');
       await environment.waitForElementVisible('[data-ta-file="testy1"]');
       await environment.waitForElementVisible('[data-ta-file="testy2"]');
+    });
+
+    it('moves the selection off a rewritten commit (uncommit of HEAD)', async () => {
+      await environment.openUngit(testRepoPaths[13]);
+      await environment.waitForElementVisible(`${rowSel('Init Commit 2')}.sel`);
+      await rightClick(rowSel('Init Commit 2'));
+      await environment.click(action('uncommit'));
+      await environment.waitForElementHidden(rowSel('Init Commit 2'));
+      await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
+      const head = await environment.page.evaluate(
+        () => ungit.__app.content().repository().graph.HEAD().sha1
+      );
+      if ((await selectedSha()) !== head) throw new Error('selection should move to the new HEAD');
+      await environment.page.waitForFunction(
+        () =>
+          document.querySelector('[data-ta-container="commit-title"]').textContent ===
+          'Init Commit 1'
+      );
     });
   });
 

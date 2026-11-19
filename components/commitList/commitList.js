@@ -288,9 +288,11 @@ class CommitListViewModel {
     if (current === 'WIP') {
       if (!hasWip) repo.selection(headSha);
     } else if (current) {
-      // A commit known to the graph stays selected even while it is not loaded (placeholder node):
-      // the details panel offers to load it. Only a commit the graph does not know is replaced.
-      if (!repo.graph.nodesById[current]) {
+      // A commit stays selected while it is listed, or while it is not loaded yet (placeholder
+      // node: the details panel offers to load it). nodesById is never pruned, so a loaded node
+      // that left the list was rewritten (uncommit, amend, reset, rebase...): replace it.
+      const node = repo.graph.nodesById[current];
+      if (!node || (node.isInited && !nodes.includes(node))) {
         // Wait until something can be selected, a not yet loaded graph must not reset anything.
         if (headSha || nodes.length) {
           repo.selection(headSha);
