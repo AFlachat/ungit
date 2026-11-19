@@ -44,8 +44,10 @@ jobs:
         run: |
           notes="npm integrity: ${{ steps.sum.outputs.sha512 }}
           sha256: ${{ steps.sum.outputs.sha256 }}"
+          # Une release publiée est immuable : son tarball peut être épinglé par empreinte. Une
+          # nouvelle construction demande un nouveau tag.
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${{ steps.sum.outputs.file }}" --clobber
-          else
-            gh release create "$TAG" "${{ steps.sum.outputs.file }}" --title "$TAG" --notes "$notes"
+            echo "::error::release $TAG déjà publiée : créer un nouveau tag plutôt que d'écraser son tarball"
+            exit 1
           fi
+          gh release create "$TAG" "${{ steps.sum.outputs.file }}" --title "$TAG" --notes "$notes"
