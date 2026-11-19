@@ -1,4 +1,5 @@
 const components = require('ungit-components');
+const { copyText } = require('./clipboard');
 const {
   commitMenuItems,
   refMenuItems,
@@ -45,6 +46,7 @@ class ModernActions {
       currentBranch,
       hasParent: node.parents().length > 0,
       canSquash: !!(isHead && currentBranch && grandparent && grandparent.isInited),
+      autoStash: this._autoStash(),
     });
     this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { node }));
   }
@@ -83,6 +85,17 @@ class ModernActions {
       isCurrentRef: !!ref.current(),
     });
     this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { ref, node }));
+  }
+
+  _autoStash() {
+    return ungit.config.autoStashAndPop !== false;
+  }
+
+  // Checks out a ref. A remote branch whose local branch exists checks out that local branch:
+  // RefViewModel.checkout() would force-move it to the remote commit, orphaning local commits.
+  checkoutRef(ref) {
+    const local = ref.isRemoteBranch ? ref.getLocalRef() : null;
+    return (local || ref).checkout();
   }
 
   // ---- drag & drop ----
@@ -129,7 +142,7 @@ class ModernActions {
   }
 
   _clip(text) {
-    return navigator.clipboard.writeText(text);
+    return copyText(text);
   }
 
   _askYes(title, details, onYes) {
@@ -195,12 +208,16 @@ class ModernActions {
       case 'reset-soft':
       case 'reset-mixed':
         return this._post('/reset', { to: node.sha1, mode: id.slice('reset-'.length) });
-      case 'reset-hard':
+      case 'reset-hard': {
+        const lost = this._autoStash()
+          ? 'Commits after it will be lost; uncommitted changes are stashed and re-applied.'
+          : 'Uncommitted changes and commits after it will be lost.';
         return this._askYes(
           'Are you sure?',
-          `Reset ${escapeHtml(graph.checkedOutBranch() || 'HEAD')} to ${node.sha1.slice(0, 7)}? Uncommitted changes and commits after it will be lost.`,
+          `Reset ${escapeHtml(graph.checkedOutBranch() || 'HEAD')} to ${node.sha1.slice(0, 7)}? ${lost}`,
           () => this._post('/reset', { to: node.sha1, mode: 'hard' })
         );
+      }
       case 'copy-sha':
         return this._clip(node.sha1);
       case 'copy-message':
@@ -209,7 +226,7 @@ class ModernActions {
         return this._clip(ref.localRefName);
 
       case 'checkout-ref':
-        return ref.checkout();
+        return this.checkoutRef(ref);
       case 'merge-ref':
         return graph.performAction(GraphActions.Merge, checkedOutRef.node(), ref);
       case 'rebase-onto-ref':
@@ -229,12 +246,6 @@ class ModernActions {
       case 'merge-into-ref':
         if (!(await this._checkoutIfNeeded(ref))) return;
         return this._post('/merge', { with: node.sha1 });
-      case 'reset-ref-to-commit':
-        return this._askYes(
-          'Are you sure?',
-          `Reset ${escapeHtml(ref.localRefName)} to ${node.sha1.slice(0, 7)}? Commits after it will be lost.`,
-          () => ref.moveTo(node.sha1, true)
-        );
       default:
         throw new Error(`unknown context menu action: ${id}`);
     }

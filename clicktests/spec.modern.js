@@ -22,6 +22,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 3 }, // 9: context menus and drag & drop
       { bare: false, initCommits: 3 }, // 10: squash
       { bare: false, initCommits: 60 }, // 11: history loading
+      { bare: false, initCommits: 2 }, // 12: pull (upstream, cloned below)
     ]);
   });
 
@@ -223,6 +224,27 @@ describe('[MODERN] shell', () => {
       await environment.click(`${rightSel} [data-ta-clickable="modern-parent"]`);
       await environment.waitForElementVisible(`${rowSel('Init Commit 1')}.sel`);
       await environment.waitForElementVisible(`${rightSel} .modern-file[data-ta-file="testy1"]`);
+    });
+
+    it('copies the SHA without the clipboard API (insecure origin)', async () => {
+      pageErrors.length = 0;
+      await environment.page.evaluate(() => {
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins -- runs in the browser
+        Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+        window.__copied = [];
+        document.execCommand = (cmd) => {
+          window.__copied.push(cmd);
+          return true;
+        };
+      });
+      await environment.click(`${rightSel} [data-ta-clickable="copy-sha"]`);
+      await environment.page.waitForFunction(() => window.__copied.includes('copy'));
+      const row = await environment.waitForElementVisible(rowSel('Init Commit 1'));
+      await row.click({ button: 'right' });
+      await environment.click('[data-ta-container="context-menu"] [data-ta-action="copy-sha"]');
+      await environment.page.waitForFunction(() => window.__copied.length === 2);
+      if (await environment.page.$('.crash')) throw new Error('copy crashed the app');
+      if (pageErrors.length) throw new Error(`page errors: ${pageErrors.join('; ')}`);
     });
 
     it('commits from the WIP panel', async () => {
@@ -499,6 +521,16 @@ describe('[MODERN] shell', () => {
       await environment.waitForElementVisible(stashItem);
       const n = await environment.page.$$eval(stashItem, (els) => els.length);
       if (n !== 1) throw new Error(`expected 1 stash, got ${n}`);
+      await environment.page.$eval(filterSel, (el) => {
+        el.value = 'no-such-stash';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await environment.waitForElementHidden(stashItem);
+      await environment.page.$eval(filterSel, (el) => {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await environment.waitForElementVisible(stashItem);
       await environment.click(stashItem);
       await environment.waitForElementVisible('[data-ta-container="stash-details"]');
       await environment.waitForElementVisible('[data-ta-container="stash-files"] [data-ta-file]');
@@ -528,6 +560,22 @@ describe('[MODERN] shell', () => {
         {},
         master
       );
+    });
+
+    it('double click on a remote branch checks out its local branch without moving it', async () => {
+      const dir = testRepoPaths[8];
+      const rev = (r) => execFileSync('git', ['rev-parse', r], { cwd: dir }).toString().trim();
+      await environment.backgroundAction('POST', '/api/checkout', { path: dir, name: 'master' });
+      const feature = rev('feature');
+      // origin/feature one commit behind the local branch, as after a local commit
+      execFileSync('git', ['update-ref', 'refs/remotes/origin/feature', `${feature}~1`], {
+        cwd: dir,
+      });
+      await environment.ensureRedraw();
+      await environment.waitForElementVisible(`${item('master')}.current`);
+      await environment.click(item('origin/feature'), 2);
+      await environment.waitForElementVisible(`${item('feature')}.current`);
+      if (rev('feature') !== feature) throw new Error('the local branch was moved');
     });
   });
 
@@ -625,6 +673,86 @@ describe('[MODERN] shell', () => {
       await environment.click('[data-ta-clickable="wip-row"]');
       await environment.waitForElementVisible('[data-ta-file="testy1"]');
       await environment.waitForElementVisible('[data-ta-file="testy2"]');
+    });
+  });
+
+  describe('pull', () => {
+    const upstream = () => testRepoPaths[12];
+    const clone = () => `${testRepoPaths[12]}-clone`;
+    const pullBtn = '[data-ta-clickable="modern-pull"]:not([disabled])';
+    const modal = '[data-ta-container="yes-no-modal"]';
+    const commitIn = async (dir, name, message) => {
+      await environment.createTestFile(`${dir}/${name}`, dir);
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: dir,
+        message,
+        files: [{ name }],
+      });
+    };
+    const headTitle = (title) =>
+      environment.page.waitForFunction(
+        (t) => {
+          const head = ungit.__app.content().repository().graph.HEAD();
+          return head && head.title() === t;
+        },
+        {},
+        title
+      );
+    const rebaseRequests = [];
+    const onRequest = (req) => {
+      if (/\/api\/rebase/.test(req.url())) rebaseRequests.push(req.url());
+    };
+
+    before(async () => {
+      execFileSync('git', ['clone', '-q', upstream(), clone()]);
+      await commitIn(upstream(), 'up1', 'Upstream change');
+      await commitIn(clone(), 'local1', 'Local change');
+      environment.page.on('request', onRequest);
+    });
+
+    after(() => environment.page.off('request', onRequest));
+
+    it('asks before rebasing diverged branches, and does nothing on No', async () => {
+      await environment.openUngit(clone());
+      await environment.waitForElementVisible(rowSel('Local change'));
+      await environment.click(pullBtn);
+      await environment.waitForElementVisible(modal);
+      const text = await environment.page.$eval(`${modal} .modal-body`, (el) => el.textContent);
+      if (!text.includes('Rebase 1 local commit of master onto origin/master?'))
+        throw new Error(`unexpected confirmation: ${text}`);
+      await environment.click(`${modal} [data-ta-action="no"]`);
+      await environment.waitForElementHidden(modal);
+      await environment.page.waitForNetworkIdle();
+      if (rebaseRequests.length) throw new Error('rebased although the answer was No');
+    });
+
+    it('rebases diverged branches on Yes', async () => {
+      await environment.click(pullBtn);
+      await environment.waitForElementVisible(modal);
+      await environment.click(`${modal} [data-ta-action="yes"]`);
+      await environment.page.waitForFunction(() => {
+        const g = ungit.__app.content().repository().graph;
+        const head = g.HEAD();
+        const parent = head && g.nodesById[head.parents()[0]];
+        return head.title() === 'Local change' && parent && parent.title() === 'Upstream change';
+      });
+    });
+
+    it('does nothing when the local branch is only ahead', async () => {
+      rebaseRequests.length = 0;
+      await environment.click(pullBtn);
+      await environment.page.waitForNetworkIdle();
+      if (await environment.page.$(modal)) throw new Error('no confirmation expected');
+      if (rebaseRequests.length) throw new Error('nothing to pull, no rebase expected');
+    });
+
+    it('fast-forwards without asking', async () => {
+      execFileSync('git', ['reset', '-q', '--hard', 'origin/master'], { cwd: clone() });
+      await commitIn(upstream(), 'up2', 'Upstream 2');
+      await headTitle('Upstream change');
+      await environment.click(pullBtn);
+      await headTitle('Upstream 2');
+      if (await environment.page.$(modal)) throw new Error('no confirmation expected');
     });
   });
 });

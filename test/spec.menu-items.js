@@ -44,7 +44,20 @@ describe('menuItems', () => {
         find(items, 'rebase-onto-commit').label,
         'Rebase <b>master</b> onto this commit'
       );
-      assert.strictEqual(reset.children[2].label, 'Hard — discard all changes');
+      assert.strictEqual(
+        reset.children[2].label,
+        'Hard — reset index and working tree (changes are auto-stashed)'
+      );
+    });
+
+    it('hard reset label follows autoStash', () => {
+      const hard = (autoStash) =>
+        find(commitMenuItems({ ...base, autoStash }), 'reset').children[2].label;
+      assert.strictEqual(hard(false), 'Hard — discard working changes');
+      assert.strictEqual(
+        hard(true),
+        'Hard — reset index and working tree (changes are auto-stashed)'
+      );
     });
 
     it('detached HEAD', () => {
@@ -165,32 +178,49 @@ describe('menuItems', () => {
   });
 
   describe('dropMenuItems', () => {
-    it('builds items', () => {
+    it('builds items for a ref that is not checked out', () => {
       const items = dropMenuItems({
         refName: 'feat',
         targetSha1: 'abcdef1234',
         isCurrentRef: false,
       });
-      assert.deepStrictEqual(ids(items), [
-        'move-ref',
-        'rebase-ref',
-        'merge-into-ref',
-        'reset-ref-to-commit',
-      ]);
+      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref', 'merge-into-ref']);
       assert.strictEqual(find(items, 'move-ref').label, 'Move <b>feat</b> here');
-      assert.strictEqual(find(items, 'rebase-ref').label, 'Rebase <b>feat</b> onto abcdef1');
-      assert.strictEqual(find(items, 'merge-into-ref').label, 'Merge abcdef1 into <b>feat</b>');
-      assert.strictEqual(find(items, 'reset-ref-to-commit').danger, true);
+      assert.strictEqual(
+        find(items, 'rebase-ref').label,
+        'Checkout <b>feat</b>, then rebase onto abcdef1'
+      );
+      assert.strictEqual(
+        find(items, 'merge-into-ref').label,
+        'Checkout <b>feat</b>, then merge abcdef1 into it'
+      );
       assertNoBadSeparators(items);
     });
 
-    it('escapes ref', () => {
+    it('builds items for the checked out ref', () => {
       const items = dropMenuItems({
-        refName: '<img>',
+        refName: 'feat',
         targetSha1: 'abcdef1234',
         isCurrentRef: true,
       });
-      assert(find(items, 'move-ref').label.includes('&lt;img&gt;'));
+      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref', 'merge-into-ref']);
+      assert.strictEqual(find(items, 'rebase-ref').label, 'Rebase <b>feat</b> onto abcdef1');
+      assert.strictEqual(find(items, 'merge-into-ref').label, 'Merge abcdef1 into <b>feat</b>');
+    });
+
+    it('has no reset item: moving the ref is the same operation', () => {
+      [true, false].forEach((isCurrentRef) => {
+        const items = dropMenuItems({ refName: 'feat', targetSha1: 'abcdef1234', isCurrentRef });
+        assert(!ids(items).includes('reset-ref-to-commit'));
+      });
+    });
+
+    it('escapes ref', () => {
+      [true, false].forEach((isCurrentRef) => {
+        const items = dropMenuItems({ refName: '<img>', targetSha1: 'abcdef1234', isCurrentRef });
+        items.forEach((i) => assert(!i.label.includes('<img>'), i.id));
+        assert(find(items, 'move-ref').label.includes('&lt;img&gt;'));
+      });
     });
   });
 });

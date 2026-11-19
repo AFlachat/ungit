@@ -23,7 +23,9 @@ const compactSeparators = (items) => {
   return out;
 };
 
-const commitMenuItems = ({ isHead, currentBranch, hasParent, canSquash }) => {
+// autoStash: ungit.config.autoStashAndPop (the server stashes and re-applies working changes
+// around a reset); only an explicit false means a hard reset discards them.
+const commitMenuItems = ({ isHead, currentBranch, hasParent, canSquash, autoStash }) => {
   const onBranch = !!currentBranch;
   const branch = onBranch ? bold(currentBranch) : 'HEAD';
   return compactSeparators([
@@ -47,7 +49,13 @@ const commitMenuItems = ({ isHead, currentBranch, hasParent, canSquash }) => {
         children: [
           item('reset-soft', 'Soft — keep all changes staged'),
           item('reset-mixed', 'Mixed — keep changes unstaged'),
-          item('reset-hard', 'Hard — discard all changes', { danger: true }),
+          item(
+            'reset-hard',
+            autoStash === false
+              ? 'Hard — discard working changes'
+              : 'Hard — reset index and working tree (changes are auto-stashed)',
+            { danger: true }
+          ),
         ],
       }),
     'separator',
@@ -89,15 +97,22 @@ const refMenuItems = ({
   ]);
 };
 
-const dropMenuItems = ({ refName, targetSha1 }) => {
+// Moving a ref and resetting it to the target are the same operation (moveTo warns on rewinds),
+// so there is no separate reset item. Rebase and merge run on the dragged ref, which is checked
+// out first when it is not the current one: the labels say so.
+const dropMenuItems = ({ refName, targetSha1, isCurrentRef }) => {
   const ref = bold(refName);
   const short = escapeHtml(String(targetSha1).slice(0, 7));
   return compactSeparators([
     item('move-ref', `Move ${ref} here`),
-    item('rebase-ref', `Rebase ${ref} onto ${short}`),
-    item('merge-into-ref', `Merge ${short} into ${ref}`),
-    'separator',
-    item('reset-ref-to-commit', `Reset ${ref} to ${short}`, { danger: true }),
+    item(
+      'rebase-ref',
+      isCurrentRef ? `Rebase ${ref} onto ${short}` : `Checkout ${ref}, then rebase onto ${short}`
+    ),
+    item(
+      'merge-into-ref',
+      isCurrentRef ? `Merge ${short} into ${ref}` : `Checkout ${ref}, then merge ${short} into it`
+    ),
   ]);
 };
 

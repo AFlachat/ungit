@@ -5,6 +5,8 @@ const programEvents = require('ungit-program-events');
 const storage = require('ungit-storage');
 const { editGitignore } = require('../repository/gitignore');
 const ModernActions = require('./actions');
+const { pullPlan } = require('./pullPlan');
+const { escapeHtml } = require('../contextMenu/menuItems');
 
 components.register(
   'repositoryModern',
@@ -189,15 +191,50 @@ class RepositoryModernViewModel {
     return this.remotes.fetch({ nodes: true, tags: true });
   }
 
+  // Pull = fetch, then rebase the checked out branch onto its remote counterpart. A fast-forward
+  // runs at once; diverged branches (or a history too short to tell) are confirmed first.
   async pull() {
     if (this.isPulling) return;
     this.isPulling = true;
+    let confirm = null;
     try {
       await this.remotes.fetch({ nodes: true, tags: true });
+      // decide on fresh refs: run the pending graph reload now
+      this.graph.loadNodesFromApi();
+      await this.graph.loadNodesFromApi.flush();
       const ref = this.graph.checkedOutRef();
       if (!ref) return;
       const remoteRef = ref.getRemoteRef(this.remotes.currentRemote());
-      if (!remoteRef || remoteRef.node() === this.graph.HEAD()) return;
+      if (!remoteRef) return;
+      const plan = pullPlan(this.graph.HEAD(), remoteRef.node(), this.graph.nodesById);
+      if (plan.action === 'none') return;
+      if (plan.action === 'fast-forward') return await this._rebaseOnto(remoteRef);
+      const commits =
+        plan.ahead == null
+          ? 'the local commits'
+          : `${plan.ahead} local commit${plan.ahead === 1 ? '' : 's'}`;
+      confirm = {
+        details: `Rebase ${commits} of <b>${escapeHtml(ref.localRefName)}</b> onto <b>${escapeHtml(remoteRef.localRefName)}</b>?`,
+        remoteRef,
+      };
+    } catch (err) {
+      this.server.unhandledRejection(err);
+    } finally {
+      this.isPulling = false;
+    }
+    if (confirm) {
+      components.showModal('yesnomodal', {
+        title: 'Pull',
+        details: confirm.details,
+        closeFunc: (isYes) => {
+          if (isYes) this._rebaseOnto(confirm.remoteRef);
+        },
+      });
+    }
+  }
+
+  async _rebaseOnto(remoteRef) {
+    try {
       await this.server.postPromise('/rebase', {
         path: this.repoPath(),
         onto: remoteRef.localRefName,
@@ -205,8 +242,6 @@ class RepositoryModernViewModel {
     } catch (err) {
       if (err.errorCode !== 'merge-failed') this.server.unhandledRejection(err);
       else ungit.logger.warn('pull (rebase) failed', err);
-    } finally {
-      this.isPulling = false;
     }
   }
 

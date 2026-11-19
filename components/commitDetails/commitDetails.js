@@ -1,6 +1,7 @@
 const ko = require('knockout');
 const components = require('ungit-components');
 const { bar5, initialsOf } = require('../repositoryModern/fileUtils');
+const { copyText } = require('../repositoryModern/clipboard');
 
 components.register('commitDetails', (args) => new CommitDetailsViewModel(args));
 
@@ -100,6 +101,6 @@ class CommitDetailsViewModel {
   }
 
   copySha(commit) {
-    commit.copyHash();
+    copyText(commit.sha1);
   }
 }

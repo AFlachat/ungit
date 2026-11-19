@@ -204,7 +204,7 @@ class SidebarViewModel {
   }
 
   open(item) {
-    if (item.ref) item.ref.checkout();
+    if (item.ref) this.repo.actions.checkoutRef(item.ref);
   }
 
   onContextMenu(item, event) {
