@@ -59,6 +59,16 @@ Example of `~/.ungitrc` configuration file to change default port and enable bug
 }
 ```
 
+Modern UI (opt-in)
+------------------
+Ungit ships with an optional GitKraken-style interface: a refs sidebar, a single commit graph with a details panel and in-place diffs (hunk, inline or split), context menus and drag & drop. It is disabled by default; enable it with the `ui` option, either in your `.ungitrc` (`"ui": "modern"`) or at launch:
+
+```
+ungit --ui=modern
+```
+
+Any other value (including the default `"classic"`) keeps the classic interface.
+
 PGP
 ---
 [Git](https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work) and [github](https://help.github.com/articles/signing-commits-using-gpg/) both supports PGP signing.  Within Ungit these features can be enabled via doing either one of the below two actions.
