@@ -9,8 +9,11 @@
           class="modern-shabtn"
           title="Copy SHA"
           data-ta-clickable="copy-sha"
-          data-bind="click: $root.copySha, text: $root.shortSha(sha1) + ' ⧉'"
-        ></button>
+          data-bind="click: $root.copySha"
+        >
+          <span data-bind="text: $root.shortSha(sha1)"></span>
+          <span class="modern-copy-ic" data-bind="html: $root.copyIcon"></span>
+        </button>
       </div>
       <h2 data-ta-container="commit-title" data-bind="text: title"></h2>
       <!-- ko if: body -->
@@ -64,8 +67,8 @@
         <svg class="modern-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z" opacity=".6"/></svg>
         <span class="modern-fn"><bdi data-bind="text: displayName"></bdi></span>
         <span class="modern-fs">
-          <span class="modern-add" data-bind="text: '+' + additions"></span>
-          <span class="modern-del" data-bind="text: '−' + deletions"></span>
+          <span class="modern-add" data-bind="text: addText"></span>
+          <span class="modern-del" data-bind="text: delText"></span>
         </span>
         <span class="modern-bar5" data-bind="foreach: bar"><i data-bind="css: $data"></i></span>
       </div>
@@ -135,8 +138,8 @@
         <svg class="modern-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z" opacity=".6"/></svg>
         <span class="modern-fn"><bdi data-bind="text: displayName"></bdi></span>
         <span class="modern-fs">
-          <span class="modern-add" data-bind="text: '+' + additions"></span>
-          <span class="modern-del" data-bind="text: '−' + deletions"></span>
+          <span class="modern-add" data-bind="text: addText"></span>
+          <span class="modern-del" data-bind="text: delText"></span>
         </span>
         <span class="modern-bar5" data-bind="foreach: bar"><i data-bind="css: $data"></i></span>
       </div>

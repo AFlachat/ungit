@@ -55,7 +55,11 @@ class SidebarViewModel {
 
     const groupsOf = ko.pureComputed(() => {
       const q = this.filter().trim().toLowerCase();
-      const match = (item) => !q || item.name.toLowerCase().includes(q);
+      // stashes are shown by their message (label), not their reflog id: match both
+      const match = (item) =>
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        (!!item.label && String(item.label).toLowerCase().includes(q));
       const refs = this._refItems();
       const stashes = this._list(this.repo.stash && this.repo.stash.stashedChanges).map((s) =>
         this._stashItem(s)

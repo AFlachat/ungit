@@ -1,5 +1,6 @@
 'use strict';
 const { execFileSync } = require('child_process');
+const fs = require('fs');
 const environment = require('./environment')({ serverStartupOptions: ['--ui=modern'] });
 const testRepoPaths = [];
 
@@ -76,6 +77,8 @@ describe('[MODERN] shell', () => {
     if (await environment.page.$('[data-ta-clickable="wip-row"]')) {
       throw new Error('wip-row should not exist in a clean repository');
     }
+    // nothing to stash in a clean working tree
+    await environment.waitForElementVisible('[data-ta-clickable="modern-stash"][disabled]');
     // default selection is HEAD (the newest commit)
     await environment.waitForElementVisible(`${rowSel('Init Commit 2')}.sel`);
   });
@@ -85,6 +88,7 @@ describe('[MODERN] shell', () => {
     await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
     const count = await environment.page.$$eval('.modern-row', (els) => els.length);
     if (count !== 4) throw new Error(`expected 4 rows, got ${count}`);
+    await environment.waitForElementVisible('[data-ta-clickable="modern-stash"]:not([disabled])');
     // creating a WIP row must not steal the selection from HEAD
     await environment.waitForElementVisible(`${rowSel('Init Commit 2')}.sel`);
   });
@@ -271,6 +275,22 @@ describe('[MODERN] shell', () => {
         el.getAttribute('data-ta-node-title')
       );
       if (first !== 'Modern WIP commit') throw new Error(`top row is "${first}"`);
+    });
+
+    it('shows no line counts for a binary file', async () => {
+      const dir = testRepoPaths[5];
+      fs.writeFileSync(`${dir}/bin.dat`, Buffer.from([0, 1, 2, 0, 255, 0, 3]));
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: dir,
+        message: 'Binary commit',
+        files: [{ name: 'bin.dat' }],
+      });
+      await environment.waitForElementVisible(rowSel('Binary commit'));
+      await environment.click(rowSel('Binary commit'));
+      const fs1 = `${rightSel} .modern-file[data-ta-file="bin.dat"] .modern-fs`;
+      await environment.waitForElementVisible(`${rightSel} .modern-file[data-ta-file="bin.dat"]`);
+      const text = await environment.page.$eval(fs1, (el) => el.textContent.trim());
+      if (text !== '') throw new Error(`binary file shows counts "${text}"`);
     });
 
     it('commits in an empty repository', async () => {
@@ -521,6 +541,13 @@ describe('[MODERN] shell', () => {
       await environment.waitForElementVisible(stashItem);
       const n = await environment.page.$$eval(stashItem, (els) => els.length);
       if (n !== 1) throw new Error(`expected 1 stash, got ${n}`);
+      // the filter matches the stash label (message), not only its reflog id
+      const label = await environment.page.$eval(`${stashItem} .modern-sb-nm`, (el) =>
+        el.textContent.trim()
+      );
+      const word = label.split(/\s+/).pop();
+      await environment.insert(filterSel, word.toUpperCase());
+      await environment.waitForElementVisible(stashItem);
       await environment.page.$eval(filterSel, (el) => {
         el.value = 'no-such-stash';
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -623,6 +650,26 @@ describe('[MODERN] shell', () => {
       await environment.waitForElementHidden(ctx);
       await rightClick(rowSel('Init Commit 0'));
       await environment.page.mouse.click(5, 5);
+      await environment.waitForElementHidden(ctx);
+    });
+
+    it('keeps a sub-menu inside the window', async () => {
+      await environment.page.evaluate(() => {
+        const repo = ungit.__app.content().repository();
+        repo.actions.openCommitMenu(200, window.innerHeight - 5, repo.graph.HEAD());
+      });
+      await environment.waitForElementVisible(ctx);
+      await environment.page.hover(action('reset'));
+      await environment.waitForElementVisible(action('reset-hard'));
+      const { bottom, top, vh } = await environment.page.$eval(
+        `${ctx} [data-ta-action="reset"] > .modern-ctx-subm`,
+        (el) => {
+          const r = el.getBoundingClientRect();
+          return { bottom: r.bottom, top: r.top, vh: window.innerHeight };
+        }
+      );
+      if (bottom > vh || top < 0) throw new Error(`sub-menu off screen: ${top}-${bottom} / ${vh}`);
+      await environment.press('Escape');
       await environment.waitForElementHidden(ctx);
     });
 

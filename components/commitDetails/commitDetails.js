@@ -1,7 +1,20 @@
 const ko = require('knockout');
+const octicons = require('octicons');
 const components = require('ungit-components');
 const { bar5, initialsOf } = require('../repositoryModern/fileUtils');
 const { copyText } = require('../repositoryModern/clipboard');
+
+// git numstat reports '-' added/removed lines for binary files: show no counts for them
+const isBinaryCount = (v) => String(v).trim() === '-';
+const fileRow = (f) => {
+  const binary = isBinaryCount(f.additions) || isBinaryCount(f.deletions);
+  return Object.assign(f, {
+    binary,
+    addText: binary ? '' : `+${f.additions}`,
+    delText: binary ? '' : `−${f.deletions}`,
+    bar: binary ? bar5(0, 0) : bar5(f.additions, f.deletions),
+  });
+};
 
 components.register('commitDetails', (args) => new CommitDetailsViewModel(args));
 
@@ -9,6 +22,7 @@ class CommitDetailsViewModel {
   constructor(args) {
     this.repo = args.repo;
     this.avatarFailed = ko.observable(false);
+    this.copyIcon = octicons.copy.toSVG({ height: 12 });
     // the node of the selected commit, null while it is not loaded (or when WIP/stash is selected)
     this.node = this.repo.selectedNode;
     this.notLoaded = this.repo.selectedCommitNotLoaded;
@@ -49,27 +63,29 @@ class CommitDetailsViewModel {
   }
 
   files(commit) {
-    return (commit.fileLineDiffs() || []).map((f) => ({
-      fileName: f.fileName,
-      oldFileName: f.oldFileName,
-      displayName: f.displayName || f.fileName,
-      type: f.type,
-      additions: f.additions,
-      deletions: f.deletions,
-      bar: bar5(f.additions, f.deletions),
-    }));
+    return (commit.fileLineDiffs() || []).map((f) =>
+      fileRow({
+        fileName: f.fileName,
+        oldFileName: f.oldFileName,
+        displayName: f.displayName || f.fileName,
+        type: f.type,
+        additions: f.additions,
+        deletions: f.deletions,
+      })
+    );
   }
 
   stashFiles(stash) {
-    return stash.commitDiff().commitLineDiffs.map((f) => ({
-      fileName: f.fileName(),
-      oldFileName: f.oldFileName(),
-      displayName: f.displayName() || f.fileName(),
-      type: f.fileType,
-      additions: f.added(),
-      deletions: f.removed(),
-      bar: bar5(f.added(), f.removed()),
-    }));
+    return stash.commitDiff().commitLineDiffs.map((f) =>
+      fileRow({
+        fileName: f.fileName(),
+        oldFileName: f.oldFileName(),
+        displayName: f.displayName() || f.fileName(),
+        type: f.fileType,
+        additions: f.added(),
+        deletions: f.removed(),
+      })
+    );
   }
 
   // sha1 of what the right panel shows: the commit or the stash

@@ -127,6 +127,7 @@ class RepositoryModernViewModel {
       remoteRef.node();
       return true;
     });
+    this.canStash = ko.computed(() => !!(this.staging.files && this.staging.files().length));
     this.canPush = ko.computed(() => {
       this.graph.refs(); // dependency: remote refs are looked up in a plain map
       const ref = this.graph.checkedOutRef();

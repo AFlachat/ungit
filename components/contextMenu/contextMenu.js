@@ -31,6 +31,7 @@ class ContextMenuViewModel {
     this._el = null;
     this._listeners = [];
     this.onClick = this.onClick.bind(this);
+    this.onMouseOver = this.onMouseOver.bind(this);
     this.close = this.close.bind(this);
   }
 
@@ -110,6 +111,24 @@ class ContextMenuViewModel {
     this._listeners = [];
   }
 
+  onMouseOver(data, event) {
+    const sub = event.target.closest && event.target.closest('.modern-ctx-sub');
+    if (sub && this._el && this._el.contains(sub)) this._clampSubmenu(sub);
+    return true;
+  }
+
+  // Shifts an open sub-menu up (or down) so that all its items stay inside the window.
+  _clampSubmenu(parent) {
+    const subm = parent.querySelector(':scope > .modern-ctx-subm');
+    if (!subm) return;
+    subm.style.top = '';
+    const rect = subm.getBoundingClientRect();
+    if (!rect.height) return; // not shown
+    let shift = Math.max(0, rect.bottom - (window.innerHeight - MARGIN));
+    if (rect.top - shift < MARGIN) shift = rect.top - MARGIN;
+    if (shift) subm.style.top = `${parseFloat(getComputedStyle(subm).top) - shift}px`;
+  }
+
   onInnerContextMenu() {
     return false; // keep the browser menu away from our menu
   }
@@ -120,6 +139,7 @@ class ContextMenuViewModel {
     if (target.classList.contains('modern-ctx-sub')) {
       // sub-menu parent: opens on hover, and on click for keyboard/touch
       target.classList.toggle('open');
+      this._clampSubmenu(target);
       return false;
     }
     const id = target.getAttribute('data-ta-action');
