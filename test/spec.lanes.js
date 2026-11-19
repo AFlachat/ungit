@@ -99,6 +99,14 @@ describe('[lanes] straight branches', () => {
     assert(Date.now() - t < 1500, `took ${Date.now() - t}ms`);
   });
 
+  it('reports the branch tip of each commit', () => {
+    const r = computeLanes([c('M', 'A', 'S'), c('S', 'B'), c('A', 'B'), c('B')]);
+    assert.deepStrictEqual(
+      r.map((x) => x.tip),
+      [0, 1, 0, 0]
+    );
+  });
+
   it('cycles the palette', () => {
     assert.strictEqual(laneColor(5), laneColor(0));
   });

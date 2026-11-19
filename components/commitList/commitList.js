@@ -125,6 +125,31 @@ class Row {
     return this.node ? this.node.commitComponent.authorDateFromNow() : 'now';
   }
 
+  // GitKraken-like date markers: the relative date is shown only on the first commit of each
+  // group of commits sharing it.
+  get dateBadge() {
+    if (this.wip) return '';
+    const date = this.date;
+    const prev = this.list.rows()[this.index - 1];
+    return prev && !prev.wip && prev.date === date ? '' : date;
+  }
+
+  // Name of the branch this commit belongs to (the ref of the tip of its straight line), shown
+  // on hover for commits that carry no branch themselves.
+  get ghostBranch() {
+    if (this.wip || !this.node || this.node.branches().length) return '';
+    const tipRow = this.list.rows()[this.lanes.tip];
+    if (!tipRow || tipRow === this) return '';
+    const tipNode = tipRow.wip ? this.list.repo.graph.HEAD() : tipRow.node;
+    if (!tipNode) return '';
+    const branches = tipNode.branches();
+    const pick =
+      branches.find((b) => b.isLocalBranch && b.current()) ||
+      branches.find((b) => b.isLocalBranch) ||
+      branches.find((b) => b.isRemoteBranch);
+    return pick ? pick.localRefName : '';
+  }
+
   get shortSha() {
     return this.node ? this.sha1.slice(0, 7) : '';
   }
@@ -192,6 +217,7 @@ class CommitListViewModel {
         let row = cache.get(e.sha1);
         if (row) row.update(e.node, e.parents, lanes[i]);
         else cache.set(e.sha1, (row = new Row(e.sha1, e.node, e.parents, lanes[i], this)));
+        row.index = i;
         return row;
       });
       for (const sha of cache.keys()) if (!seen.has(sha)) cache.delete(sha);

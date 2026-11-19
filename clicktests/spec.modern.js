@@ -768,6 +768,24 @@ describe('[MODERN] shell', () => {
       );
     });
 
+    it('shows date markers instead of a date column, and the branch name on hover', async () => {
+      if (await environment.page.$('.modern-date'))
+        throw new Error('the date column should be gone');
+      await environment.waitForElementVisible('[data-ta-clickable="date-badge"]');
+      // 'Init Commit 1' carries no branch: its branch (master) is revealed on hover
+      const sel = `${rowSel('Init Commit 1')} .modern-ghost-ref`;
+      await environment.page.waitForSelector(sel);
+      await environment.page.hover(rowSel('Init Commit 1'));
+      await environment.page.waitForFunction(
+        (s) => {
+          const el = document.querySelector(s);
+          return el && getComputedStyle(el).opacity === '1' && el.textContent.trim() === 'master';
+        },
+        {},
+        sel
+      );
+    });
+
     it('squashes HEAD with its previous commit', async () => {
       await environment.openUngit(testRepoPaths[10]);
       await environment.waitForElementVisible(rowSel('Init Commit 2'));

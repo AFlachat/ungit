@@ -7,7 +7,6 @@
     <div class="modern-head-graph">Branch / Tag · Graph</div>
     <div>Commit message</div>
     <div>Author</div>
-    <div>Date</div>
     <div>SHA</div>
   </div>
   <div class="modern-rows" data-ta-container="modern-rows" data-bind="event: { scroll: onScroll }">
@@ -33,6 +32,15 @@
         }"
     >
       <div class="modern-refs-graph">
+        <!-- ko if: !row.refs.length && row.ghostBranch -->
+        <div class="modern-refs">
+          <span
+            class="modern-ref modern-ghost-ref"
+            data-bind="text: row.ghostBranch, attr: { title: row.ghostBranch }"
+          ></span>
+        </div>
+        <!-- /ko -->
+        <!-- ko ifnot: !row.refs.length && row.ghostBranch -->
         <div class="modern-refs" data-bind="foreach: row.refs">
           <span
             class="modern-ref"
@@ -47,9 +55,19 @@
               text: name"
           ></span>
         </div>
+        <!-- /ko -->
         <span class="modern-lanes-wrap" data-bind="html: row.svg"></span>
       </div>
-      <div class="modern-msg" data-bind="text: row.title, css: { wip: row.wip }"></div>
+      <div class="modern-msg" data-bind="css: { wip: row.wip, 'has-date': !!row.dateBadge }">
+        <span class="modern-msg-text" data-bind="text: row.title"></span>
+        <!-- ko if: row.dateBadge -->
+        <span
+          class="modern-date-badge"
+          data-ta-clickable="date-badge"
+          data-bind="text: row.dateBadge, attr: { title: row.node && row.node.commitComponent.authorDate() && row.node.commitComponent.authorDate().format('LLL') }"
+        ></span>
+        <!-- /ko -->
+      </div>
       <div class="modern-author">
         <!-- ko if: row.authorName -->
         <span
@@ -59,7 +77,6 @@
         <span data-bind="text: row.authorName"></span>
         <!-- /ko -->
       </div>
-      <div class="modern-date" data-bind="text: row.date"></div>
       <div class="modern-sha" data-bind="text: row.shortSha"></div>
     </div>
     <!-- /ko -->
