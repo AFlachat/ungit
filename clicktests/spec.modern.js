@@ -25,6 +25,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 60 }, // 11: history loading
       { bare: false, initCommits: 2 }, // 12: pull (upstream, cloned below)
       { bare: false, initCommits: 3 }, // 13: rewritten selection
+      { bare: false, initCommits: 2 }, // 14: drag merge direction
     ]);
   });
 
@@ -707,6 +708,44 @@ describe('[MODERN] shell', () => {
       await environment.click('.modal-dialog .btn-primary');
       await environment.waitForElementHidden(item);
       await environment.waitForElementHidden(pill('feature'));
+    });
+
+    it('merges the dragged branch INTO the branch it is dropped on', async () => {
+      const repo = testRepoPaths[14];
+      await environment.openUngit(repo);
+      await environment.waitForElementVisible(rowSel('Init Commit 1'));
+      const sha1 = await environment.page.$eval(rowSel('Init Commit 1'), (e) =>
+        e.getAttribute('data-ta-sha')
+      );
+      await environment.backgroundAction('POST', '/api/branches', {
+        path: repo,
+        name: 'test2',
+        sha1,
+      });
+      await environment.backgroundAction('POST', '/api/checkout', { path: repo, name: 'test2' });
+      await environment.createTestFile(`${repo}/on-test2.txt`, repo);
+      await environment.backgroundAction('POST', '/api/commit', {
+        path: repo,
+        message: 'On test2',
+        files: [{ name: 'on-test2.txt' }],
+      });
+      await environment.backgroundAction('POST', '/api/checkout', { path: repo, name: 'master' });
+      await environment.ensureRedraw();
+      await environment.waitForElementVisible(`${rowSel('On test2')} ${pill('test2')}`);
+      await dragTo(pill('test2'), rowSel('Init Commit 1'));
+      await environment.waitForElementVisible(action('merge-into-target'));
+      const label = await environment.page.$eval(action('merge-into-target'), (e) =>
+        e.textContent.trim()
+      );
+      if (!/Merge test2 into master/.test(label)) throw new Error(`unexpected label: ${label}`);
+      await environment.click(action('merge-into-target'));
+      await environment.page.waitForFunction(
+        () => {
+          const g = ungit.__app.content().repository().graph;
+          return g.checkedOutBranch() === 'master' && g.HEAD() && g.HEAD().parents().length === 2;
+        },
+        { timeout: 10000 }
+      );
     });
 
     it('squashes HEAD with its previous commit', async () => {

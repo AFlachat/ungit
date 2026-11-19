@@ -178,34 +178,59 @@ describe('menuItems', () => {
   });
 
   describe('dropMenuItems', () => {
-    it('builds items for a ref that is not checked out', () => {
+    it('drops a ref that is not checked out on a commit without branch', () => {
       const items = dropMenuItems({
         refName: 'feat',
         targetSha1: 'abcdef1234',
         isCurrentRef: false,
       });
-      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref', 'merge-into-ref']);
+      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref']);
       assert.strictEqual(find(items, 'move-ref').label, 'Move <b>feat</b> here');
       assert.strictEqual(
         find(items, 'rebase-ref').label,
         'Checkout <b>feat</b>, then rebase onto abcdef1'
       );
-      assert.strictEqual(
-        find(items, 'merge-into-ref').label,
-        'Checkout <b>feat</b>, then merge abcdef1 into it'
-      );
       assertNoBadSeparators(items);
     });
 
-    it('builds items for the checked out ref', () => {
+    it('rebases the checked out ref onto the target branch', () => {
       const items = dropMenuItems({
         refName: 'feat',
         targetSha1: 'abcdef1234',
         isCurrentRef: true,
+        targetRefName: 'test',
+        isTargetCurrent: false,
       });
-      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref', 'merge-into-ref']);
-      assert.strictEqual(find(items, 'rebase-ref').label, 'Rebase <b>feat</b> onto abcdef1');
-      assert.strictEqual(find(items, 'merge-into-ref').label, 'Merge abcdef1 into <b>feat</b>');
+      assert.strictEqual(find(items, 'rebase-ref').label, 'Rebase <b>feat</b> onto <b>test</b>');
+    });
+
+    it('merges the dragged ref INTO the checked out target branch', () => {
+      const items = dropMenuItems({
+        refName: 'test2',
+        targetSha1: 'abcdef1234',
+        isCurrentRef: false,
+        targetRefName: 'test',
+        isTargetCurrent: true,
+      });
+      assert.deepStrictEqual(ids(items), ['move-ref', 'rebase-ref', 'merge-into-target']);
+      assert.strictEqual(
+        find(items, 'merge-into-target').label,
+        'Merge <b>test2</b> into <b>test</b>'
+      );
+    });
+
+    it('checks out the target branch first when it is not checked out', () => {
+      const items = dropMenuItems({
+        refName: 'test2',
+        targetSha1: 'abcdef1234',
+        isCurrentRef: true,
+        targetRefName: 'test',
+        isTargetCurrent: false,
+      });
+      assert.strictEqual(
+        find(items, 'merge-into-target').label,
+        'Checkout <b>test</b>, then merge <b>test2</b> into it'
+      );
     });
 
     it('has no reset item: moving the ref is the same operation', () => {
@@ -217,8 +242,14 @@ describe('menuItems', () => {
 
     it('escapes ref', () => {
       [true, false].forEach((isCurrentRef) => {
-        const items = dropMenuItems({ refName: '<img>', targetSha1: 'abcdef1234', isCurrentRef });
-        items.forEach((i) => assert(!i.label.includes('<img>'), i.id));
+        const items = dropMenuItems({
+          refName: '<img>',
+          targetSha1: 'abcdef1234',
+          isCurrentRef,
+          targetRefName: '<b>x',
+          isTargetCurrent: !isCurrentRef,
+        });
+        items.forEach((i) => assert(!i.label.includes('<img>') && !i.label.includes('<b>x'), i.id));
         assert(find(items, 'move-ref').label.includes('&lt;img&gt;'));
       });
     });

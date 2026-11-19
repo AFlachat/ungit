@@ -100,19 +100,25 @@ const refMenuItems = ({
 // Moving a ref and resetting it to the target are the same operation (moveTo warns on rewinds),
 // so there is no separate reset item. Rebase and merge run on the dragged ref, which is checked
 // out first when it is not the current one: the labels say so.
-const dropMenuItems = ({ refName, targetSha1, isCurrentRef }) => {
+// A ref dragged onto a commit row. When the row carries a local branch (the drop target),
+// merging follows GitKraken: the dragged ref is merged INTO the target branch.
+const dropMenuItems = ({ refName, targetSha1, isCurrentRef, targetRefName, isTargetCurrent }) => {
   const ref = bold(refName);
-  const short = escapeHtml(String(targetSha1).slice(0, 7));
+  const onto = targetRefName ? bold(targetRefName) : escapeHtml(String(targetSha1).slice(0, 7));
+  const target = targetRefName && bold(targetRefName);
   return compactSeparators([
     item('move-ref', `Move ${ref} here`),
     item(
       'rebase-ref',
-      isCurrentRef ? `Rebase ${ref} onto ${short}` : `Checkout ${ref}, then rebase onto ${short}`
+      isCurrentRef ? `Rebase ${ref} onto ${onto}` : `Checkout ${ref}, then rebase onto ${onto}`
     ),
-    item(
-      'merge-into-ref',
-      isCurrentRef ? `Merge ${short} into ${ref}` : `Checkout ${ref}, then merge ${short} into it`
-    ),
+    target &&
+      item(
+        'merge-into-target',
+        isTargetCurrent
+          ? `Merge ${ref} into ${target}`
+          : `Checkout ${target}, then merge ${ref} into it`
+      ),
   ]);
 };
 

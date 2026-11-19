@@ -79,12 +79,17 @@ class ModernActions {
 
   openDropMenu(x, y, ref, node) {
     if (!ref || !node || !this.repo.contextMenu) return;
+    // the drop target is a local branch on that commit (the checked out one first)
+    const targets = node.branches().filter((b) => b.isLocalBranch && b !== ref);
+    const targetRef = targets.find((b) => b.current()) || targets[0];
     const items = dropMenuItems({
       refName: ref.localRefName,
       targetSha1: node.sha1,
       isCurrentRef: !!ref.current(),
+      targetRefName: targetRef && targetRef.localRefName,
+      isTargetCurrent: !!(targetRef && targetRef.current()),
     });
-    this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { ref, node }));
+    this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { ref, node, targetRef }));
   }
 
   _autoStash() {
@@ -126,11 +131,11 @@ class ModernActions {
 
   // ---- dispatcher ----
 
-  async run(id, { node, ref } = {}) {
+  async run(id, { node, ref, targetRef } = {}) {
     // a graph action left waiting (e.g. a modal closed with "No") must not leak its context
     this.graph.currentActionContext(null);
     try {
-      await this._run(id, node, ref);
+      await this._run(id, node, ref, targetRef);
     } catch (err) {
       if (err && err.errorCode === 'merge-failed') ungit.logger.warn(`${id} failed`, err);
       else this.server.unhandledRejection(err);
@@ -177,7 +182,7 @@ class ModernActions {
     return !!ref.current(); // checkout() swallows its errors
   }
 
-  async _run(id, node, ref) {
+  async _run(id, node, ref, targetRef) {
     const graph = this.graph;
     // the action classes come from the graph bundle: requiring them here would bundle copies
     const GraphActions = graph.actions;
@@ -243,9 +248,9 @@ class ModernActions {
       case 'rebase-ref':
         if (!(await this._checkoutIfNeeded(ref))) return;
         return graph.performAction(GraphActions.Rebase, node, ref);
-      case 'merge-into-ref':
-        if (!(await this._checkoutIfNeeded(ref))) return;
-        return this._post('/merge', { with: node.sha1 });
+      case 'merge-into-target':
+        if (!targetRef || !(await this._checkoutIfNeeded(targetRef))) return;
+        return this._post('/merge', { with: ref.localRefName });
       default:
         throw new Error(`unknown context menu action: ${id}`);
     }
