@@ -1,6 +1,7 @@
 const ko = require('knockout');
 const components = require('ungit-components');
 const { computeLanes, laneColor } = require('./lanes');
+const { branchOwners } = require('./branchOwner');
 
 components.register('commitList', (args) => new CommitListViewModel(args));
 
@@ -134,20 +135,10 @@ class Row {
     return prev && !prev.wip && prev.date === date ? '' : date;
   }
 
-  // Name of the branch this commit belongs to (the ref of the tip of its straight line), shown
-  // on hover for commits that carry no branch themselves.
+  // Name of the branch this commit belongs to, shown on hover for commits that carry no branch.
   get ghostBranch() {
     if (this.wip || !this.node || this.node.branches().length) return '';
-    const tipRow = this.list.rows()[this.lanes.tip];
-    if (!tipRow || tipRow === this) return '';
-    const tipNode = tipRow.wip ? this.list.repo.graph.HEAD() : tipRow.node;
-    if (!tipNode) return '';
-    const branches = tipNode.branches();
-    const pick =
-      branches.find((b) => b.isLocalBranch && b.current()) ||
-      branches.find((b) => b.isLocalBranch) ||
-      branches.find((b) => b.isRemoteBranch);
-    return pick ? pick.localRefName : '';
+    return this.list.owners().get(this.sha1) || '';
   }
 
   get shortSha() {
@@ -222,6 +213,23 @@ class CommitListViewModel {
       });
       for (const sha of cache.keys()) if (!seen.has(sha)) cache.delete(sha);
       return result;
+    });
+
+    // sha1 -> name of the branch owning the commit (see branchOwner.js)
+    this.owners = ko.pureComputed(() => {
+      const graph = repo.graph;
+      const commits = graph.nodes().map((n) => ({ sha1: n.sha1, parents: n.parents() }));
+      graph.checkedOutBranch();
+      const branches = graph
+        .refs()
+        .filter((r) => (r.isLocalBranch || r.isRemoteBranch) && r.node())
+        .map((r) => ({
+          name: r.localRefName,
+          sha1: r.node().sha1,
+          isRemote: !!r.isRemoteBranch,
+          isCurrent: !!r.isLocalBranch && r.current(),
+        }));
+      return branchOwners(commits, branches);
     });
 
     this.lanesWidth = ko.computed(() => {

@@ -22,8 +22,7 @@ const MID = 1;
 const BOTTOM = 2;
 
 // commits: [{ sha1, parents: [sha1] }] newest first.
-// Returns one { dot, tip, width, segs } per commit: tip is the row of the branch tip whose
-// straight line the commit sits on (itself for a tip), and segs are the pieces of edges drawn in that
+// Returns one { dot, width, segs } per commit, where segs are the pieces of edges drawn in that
 // row: { c1, y1, c2, y2, color, dashed } with c = column and y = TOP | MID | BOTTOM.
 const computeLanes = (commits) => {
   const n = commits.length;
@@ -49,7 +48,6 @@ const computeLanes = (commits) => {
   );
 
   const col = new Array(all.length);
-  const tip = new Array(all.length); // row of the topmost commit of the straight run (branch tip)
   const active = []; // active[j] = row of the commit whose line currently runs down column j
   const intervals = []; // intervals[j] = [{ row, start, end }] lines drawn in column j
 
@@ -100,14 +98,13 @@ const computeLanes = (commits) => {
       if (active[col[r]] === r) release(col[r], i);
     });
     if (active[j] !== null && active[j] !== undefined) release(j, i);
-    tip[i] = usable.length ? tip[kids.find((r) => col[r] === j)] : i;
     col[i] = j;
     occupy(j, i, i);
     // a commit without parents ends its line on its own row
     if (!all[i].parents.length) release(j, i + 1);
   }
 
-  const rows = commits.map((c, i) => ({ dot: col[i], tip: tip[i], width: col[i] + 1, segs: [] }));
+  const rows = commits.map((c, i) => ({ dot: col[i], width: col[i] + 1, segs: [] }));
   const add = (r, seg) => {
     if (r >= n) return;
     rows[r].segs.push(seg);
