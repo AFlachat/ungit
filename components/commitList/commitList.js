@@ -146,9 +146,11 @@ class CommitListViewModel {
   constructor({ repo }) {
     this.repo = repo;
     this.select = this.select.bind(this); // used as a click handler inside foreach
-    ['onContextMenu', 'onDragStart', 'onDragOver', 'onDragLeave', 'onDrop'].forEach((k) => {
-      this[k] = this[k].bind(this);
-    });
+    ['onContextMenu', 'onDblClick', 'onDragStart', 'onDragOver', 'onDragLeave', 'onDrop'].forEach(
+      (k) => {
+        this[k] = this[k].bind(this);
+      }
+    );
     this.rowHeight = H;
     this.scrollTop = ko.observable(0);
     this.viewportHeight = ko.observable(0);
@@ -233,6 +235,16 @@ class CommitListViewModel {
     const pill = pillEl && ko.dataFor(pillEl);
     if (pill && pill.ref) this.repo.actions.openRefMenu(event.clientX, event.clientY, pill.ref);
     else this.repo.actions.openCommitMenu(event.clientX, event.clientY, row.node);
+    return false;
+  }
+
+  // Double-clicking a branch name in the graph checks that branch out.
+  onDblClick(row, event) {
+    const pillEl = event.target.closest && event.target.closest('.modern-ref');
+    const pill = pillEl && ko.dataFor(pillEl);
+    const ref = pill && pill.ref;
+    if (!ref || !(ref.isLocalBranch || ref.isRemoteBranch) || ref.current()) return true;
+    this.repo.actions.checkoutRef(ref);
     return false;
   }
 

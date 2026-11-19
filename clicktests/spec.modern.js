@@ -760,6 +760,14 @@ describe('[MODERN] shell', () => {
       );
     });
 
+    it('checks out a branch by double-clicking its name in the graph', async () => {
+      await environment.click(pill('master'), 2);
+      await environment.page.waitForFunction(
+        () => ungit.__app.content().repository().graph.checkedOutBranch() === 'master',
+        { timeout: 10000 }
+      );
+    });
+
     it('squashes HEAD with its previous commit', async () => {
       await environment.openUngit(testRepoPaths[10]);
       await environment.waitForElementVisible(rowSel('Init Commit 2'));
