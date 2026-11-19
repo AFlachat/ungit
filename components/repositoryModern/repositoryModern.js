@@ -4,7 +4,6 @@ const components = require('ungit-components');
 const programEvents = require('ungit-program-events');
 const storage = require('ungit-storage');
 const { editGitignore } = require('../repository/gitignore');
-const GraphActions = require('../graph/git-graph-actions');
 const ModernActions = require('./actions');
 
 components.register(
@@ -185,7 +184,7 @@ class RepositoryModernViewModel {
   push() {
     const ref = this.graph.checkedOutRef();
     if (!ref || !ref.canBePushed(this.remotes.currentRemote())) return;
-    return GraphActions.performAction(this.graph, GraphActions.Push, ref.node(), ref);
+    return this.graph.performAction(this.graph.actions.Push, ref.node(), ref);
   }
 
   createBranch() {

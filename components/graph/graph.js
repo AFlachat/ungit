@@ -6,6 +6,7 @@ const components = require('ungit-components');
 const GitNodeViewModel = require('./git-node');
 const GitRefViewModel = require('./git-ref');
 const EdgeViewModel = require('./edge');
+const GraphActions = require('./git-graph-actions');
 const { ComponentRoot } = require('../ComponentRoot');
 const numberOfNodesPerLoad = ungit.config.numberOfNodesPerLoad;
 
@@ -18,6 +19,9 @@ class GraphViewModel extends ComponentRoot {
   constructor(server, repoPath, headless) {
     super();
     this.headless = !!headless;
+    // Action classes of this bundle, for other component bundles (modern UI) that must not
+    // bundle their own copies (instanceof checks against RefViewModel would fail).
+    this.actions = GraphActions;
     this._isLoadNodesFromApiRunning = false;
     this.updateBranches = _.debounce(this._updateBranches, 250, this.defaultDebounceOption);
     this.loadNodesFromApi = _.debounce(this._loadNodesFromApi, 250, this.defaultDebounceOption);
@@ -92,6 +96,11 @@ class GraphViewModel extends ComponentRoot {
 
   updateNode(parentElement) {
     ko.renderTemplate('graph', this, {}, parentElement);
+  }
+
+  // Runs a graph action programmatically, see GraphActions.performAction.
+  performAction(ActionClass, node, context) {
+    return GraphActions.performAction(this, ActionClass, node, context);
   }
 
   getNode(sha1, logEntry) {

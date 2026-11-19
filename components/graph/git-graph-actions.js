@@ -11,9 +11,12 @@ const ResetViewModel = HoverActions.ResetViewModel;
 const PushViewModel = HoverActions.PushViewModel;
 const SquashViewModel = HoverActions.SquashViewModel;
 
-// instanceof is not reliable when actions run from another component bundle (modern UI), which
-// bundles its own copy of git-ref.js.
-const isRef = (x) => x instanceof RefViewModel || !!(x && x.refName !== undefined && x.node);
+// Ref names are user controlled and end up in the HTML of the yes/no modal.
+const escapeHtml = (s) =>
+  String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
 
 class ActionBase {
   constructor(graph, text, style, icon) {
@@ -118,7 +121,8 @@ class Reset extends ActionBase {
     return new Promise((resolve, reject) => {
       components.showModal('yesnomodal', {
         title: 'Are you sure?',
-        details: 'Resetting to ref: ' + remoteRef.name + ' cannot be undone with ungit.',
+        details:
+          'Resetting to ref: ' + escapeHtml(remoteRef.name) + ' cannot be undone with ungit.',
         closeFunc: async (isYes) => {
           if (isYes) {
             await this.server
@@ -130,6 +134,8 @@ class Reset extends ActionBase {
               .then(resolve)
               .catch(reject);
             context.node(remoteRef.node());
+          } else {
+            resolve();
           }
           this.isRunning(false);
         },
@@ -156,7 +162,7 @@ class Rebase extends ActionBase {
   createHoverGraphic() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (isRef(onto)) onto = onto.node();
+    if (onto instanceof RefViewModel) onto = onto.node();
     const path = onto.getPathToCommonAncestor(this.node);
     return new RebaseViewModel(this.node, path);
   }
@@ -192,7 +198,7 @@ class Merge extends ActionBase {
   createHoverGraphic() {
     let node = this.graph.currentActionContext();
     if (!node) return null;
-    if (isRef(node)) node = node.node();
+    if (node instanceof RefViewModel) node = node.node();
     return new MergeViewModel(this.graph, this.node, node);
   }
 
@@ -289,7 +295,7 @@ class Delete extends ActionBase {
 
   perform() {
     const context = this.graph.currentActionContext();
-    let details = `"${context.refName}"`;
+    let details = `"${escapeHtml(context.refName)}"`;
     if (context.isRemoteBranch) {
       details = `<code _style="font-size: 100%">REMOTE</code> ${details}`;
     }
@@ -302,6 +308,8 @@ class Delete extends ActionBase {
         closeFunc: async (isYes) => {
           if (isYes) {
             await context.remove().then(resolve).catch(reject);
+          } else {
+            resolve();
           }
           this.isRunning(false);
         },
@@ -393,7 +401,7 @@ class Squash extends ActionBase {
   createHoverGraphic() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (isRef(onto)) onto = onto.node();
+    if (onto instanceof RefViewModel) onto = onto.node();
 
     return new SquashViewModel(this.node, onto);
   }
@@ -401,7 +409,7 @@ class Squash extends ActionBase {
   perform() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (isRef(onto)) onto = onto.node();
+    if (onto instanceof RefViewModel) onto = onto.node();
     // remove last element as it would be a common ancestor.
     const path = this.node.getPathToCommonAncestor(onto).slice(0, -1);
 

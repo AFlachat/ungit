@@ -1,13 +1,10 @@
 const components = require('ungit-components');
-const GraphActions = require('../graph/git-graph-actions');
 const {
   commitMenuItems,
   refMenuItems,
   dropMenuItems,
   escapeHtml,
 } = require('../contextMenu/menuItems');
-
-const { performAction } = GraphActions;
 
 // Opens the context menus of the modern UI and runs the chosen item through the existing git
 // actions. Every server call goes through repo.server; errors end up in unhandledRejection.
@@ -117,6 +114,8 @@ class ModernActions {
   // ---- dispatcher ----
 
   async run(id, { node, ref } = {}) {
+    // a graph action left waiting (e.g. a modal closed with "No") must not leak its context
+    this.graph.currentActionContext(null);
     try {
       await this._run(id, node, ref);
     } catch (err) {
@@ -167,6 +166,8 @@ class ModernActions {
 
   async _run(id, node, ref) {
     const graph = this.graph;
+    // the action classes come from the graph bundle: requiring them here would bundle copies
+    const GraphActions = graph.actions;
     const checkedOutRef = graph.checkedOutRef();
     switch (id) {
       case 'checkout-commit':
@@ -178,18 +179,18 @@ class ModernActions {
       case 'merge-commit':
         return this._post('/merge', { with: node.sha1 });
       case 'rebase-onto-commit':
-        return performAction(graph, GraphActions.Rebase, node, checkedOutRef);
+        return graph.performAction(GraphActions.Rebase, node, checkedOutRef);
       case 'cherry-pick':
-        return performAction(graph, GraphActions.CherryPick, node, node);
+        return graph.performAction(GraphActions.CherryPick, node, node);
       case 'revert':
-        return performAction(graph, GraphActions.Revert, node, node);
+        return graph.performAction(GraphActions.Revert, node, node);
       case 'uncommit':
-        return performAction(graph, GraphActions.Uncommit, node, node);
+        return graph.performAction(GraphActions.Uncommit, node, node);
       case 'squash': {
         // "Squash with previous": HEAD and its parent become one staged change on the grandparent
         const grandparent = this._grandparent(node);
         if (!grandparent || !checkedOutRef) return;
-        return performAction(graph, GraphActions.Squash, grandparent, checkedOutRef);
+        return graph.performAction(GraphActions.Squash, grandparent, checkedOutRef);
       }
       case 'reset-soft':
       case 'reset-mixed':
@@ -210,21 +211,21 @@ class ModernActions {
       case 'checkout-ref':
         return ref.checkout();
       case 'merge-ref':
-        return performAction(graph, GraphActions.Merge, checkedOutRef.node(), ref);
+        return graph.performAction(GraphActions.Merge, checkedOutRef.node(), ref);
       case 'rebase-onto-ref':
-        return performAction(graph, GraphActions.Rebase, ref.node(), checkedOutRef);
+        return graph.performAction(GraphActions.Rebase, ref.node(), checkedOutRef);
       case 'push-ref':
-        return performAction(graph, GraphActions.Push, ref.node(), ref);
+        return graph.performAction(GraphActions.Push, ref.node(), ref);
       case 'reset-to-remote':
-        return performAction(graph, GraphActions.Reset, ref.node(), ref);
+        return graph.performAction(GraphActions.Reset, ref.node(), ref);
       case 'delete-ref':
-        return performAction(graph, GraphActions.Delete, ref.node(), ref);
+        return graph.performAction(GraphActions.Delete, ref.node(), ref);
 
       case 'move-ref':
         return ref.moveTo(node.sha1);
       case 'rebase-ref':
         if (!(await this._checkoutIfNeeded(ref))) return;
-        return performAction(graph, GraphActions.Rebase, node, ref);
+        return graph.performAction(GraphActions.Rebase, node, ref);
       case 'merge-into-ref':
         if (!(await this._checkoutIfNeeded(ref))) return;
         return this._post('/merge', { with: node.sha1 });
