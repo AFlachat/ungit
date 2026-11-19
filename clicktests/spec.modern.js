@@ -748,6 +748,18 @@ describe('[MODERN] shell', () => {
       );
     });
 
+    it('checks out a branch (not a detached commit) from the commit menu', async () => {
+      await rightClick(rowSel('On test2'));
+      await environment.waitForElementVisible(action('checkout-branch:test2'));
+      if (await environment.page.$(action('checkout-commit')))
+        throw new Error('detached checkout offered although the commit has a branch');
+      await environment.click(action('checkout-branch:test2'));
+      await environment.page.waitForFunction(
+        () => ungit.__app.content().repository().graph.checkedOutBranch() === 'test2',
+        { timeout: 10000 }
+      );
+    });
+
     it('squashes HEAD with its previous commit', async () => {
       await environment.openUngit(testRepoPaths[10]);
       await environment.waitForElementVisible(rowSel('Init Commit 2'));

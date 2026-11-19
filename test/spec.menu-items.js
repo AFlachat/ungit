@@ -77,6 +77,26 @@ describe('menuItems', () => {
       assertNoBadSeparators(items);
     });
 
+    it('offers a real checkout of each branch on the commit', () => {
+      const items = commitMenuItems({ ...base, checkoutBranches: ['test', 'origin/<x>'] });
+      const r = ids(items);
+      assert(r.includes('checkout-branch:test'));
+      assert(r.includes('checkout-branch:origin/<x>'));
+      assert(!r.includes('checkout-commit'), 'no detached checkout when a branch exists');
+      assert.strictEqual(find(items, 'checkout-branch:test').label, 'Checkout <b>test</b>');
+      assert(!find(items, 'checkout-branch:origin/<x>').label.includes('<x>'));
+    });
+
+    it('falls back to a detached checkout only without branch', () => {
+      const r = ids(commitMenuItems({ ...base, checkoutBranches: [] }));
+      assert(r.includes('checkout-commit'));
+    });
+
+    it('offers no checkout of the commit already checked out', () => {
+      const r = ids(commitMenuItems({ ...base, isHead: true, checkoutBranches: [] }));
+      assert(!r.includes('checkout-commit'));
+    });
+
     it('root commit at HEAD', () => {
       const r = ids(commitMenuItems({ ...base, isHead: true, hasParent: false }));
       assert(!r.includes('uncommit'));

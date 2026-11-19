@@ -25,11 +25,23 @@ const compactSeparators = (items) => {
 
 // autoStash: ungit.config.autoStashAndPop (the server stashes and re-applies working changes
 // around a reset); only an explicit false means a hard reset discards them.
-const commitMenuItems = ({ isHead, currentBranch, hasParent, canSquash, autoStash }) => {
+// checkoutBranches: branches pointing at this commit that can be checked out (local names, or
+// remote names without local branch). A detached checkout is offered only when there is none.
+const commitMenuItems = ({
+  isHead,
+  currentBranch,
+  hasParent,
+  canSquash,
+  autoStash,
+  checkoutBranches = [],
+}) => {
   const onBranch = !!currentBranch;
   const branch = onBranch ? bold(currentBranch) : 'HEAD';
   return compactSeparators([
-    item('checkout-commit', 'Checkout this commit (detached)'),
+    ...checkoutBranches.map((name) => item(`checkout-branch:${name}`, `Checkout ${bold(name)}`)),
+    !isHead &&
+      !checkoutBranches.length &&
+      item('checkout-commit', 'Checkout this commit (detached)'),
     item('create-branch', 'Create branch here…'),
     item('create-tag', 'Create tag here…'),
     'separator',

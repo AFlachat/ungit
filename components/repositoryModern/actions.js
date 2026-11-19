@@ -47,8 +47,21 @@ class ModernActions {
       hasParent: node.parents().length > 0,
       canSquash: !!(isHead && currentBranch && grandparent && grandparent.isInited),
       autoStash: this._autoStash(),
+      checkoutBranches: this._checkoutCandidates(node).map((r) => r.localRefName),
     });
     this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { node }));
+  }
+
+  // Branches of a commit that a "Checkout" can switch to: local branches that are not checked
+  // out, plus remote branches whose local branch does not exist yet (checkout creates it).
+  _checkoutCandidates(node) {
+    return node
+      .branches()
+      .filter(
+        (b) =>
+          (b.isLocalBranch && !b.current()) ||
+          (b.isRemoteBranch && !b.isRemoteHEAD && !b.getLocalRef())
+      );
   }
 
   openRefMenu(x, y, ref) {
@@ -187,6 +200,11 @@ class ModernActions {
     // the action classes come from the graph bundle: requiring them here would bundle copies
     const GraphActions = graph.actions;
     const checkedOutRef = graph.checkedOutRef();
+    if (id.startsWith('checkout-branch:')) {
+      const name = id.slice('checkout-branch:'.length);
+      const target = this._checkoutCandidates(node).find((b) => b.localRefName === name);
+      return target && this.checkoutRef(target);
+    }
     switch (id) {
       case 'checkout-commit':
         return this._post('/checkout', { name: node.sha1 });
