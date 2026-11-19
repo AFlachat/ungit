@@ -1,4 +1,5 @@
 'use strict';
+const { execFileSync } = require('child_process');
 const environment = require('./environment')({ serverStartupOptions: ['--ui=modern'] });
 const testRepoPaths = [];
 
@@ -217,9 +218,37 @@ describe('[MODERN] shell', () => {
       await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
       await environment.click('[data-ta-clickable="wip-row"]');
       await environment.waitForElementVisible(`${rightSel} [data-ta-container="conflict-banner"]`);
-      await environment.waitForElementVisible(`${commitBtn}[disabled]`);
+      await environment.waitForElementHidden(commitBtn);
       await environment.click('[data-ta-clickable="modern-conflict-abort"]');
       await environment.waitForElementHidden('[data-ta-container="conflict-banner"]');
+    });
+
+    it('resolves a merge conflict and continues', async () => {
+      const dir = testRepoPaths[6];
+      try {
+        await environment.backgroundAction('POST', '/api/merge', { path: dir, with: 'master' });
+      } catch {
+        // expected: merge-failed
+      }
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible(`${rightSel} [data-ta-container="conflict-banner"]`);
+      await environment.waitForElementVisible(
+        '[data-ta-clickable="modern-conflict-continue"][disabled]'
+      );
+      await environment.backgroundAction('POST', '/api/testing/changefile', {
+        path: dir,
+        file: `${dir}/testy0`,
+        content: 'resolved\n',
+      });
+      execFileSync('git', ['add', 'testy0'], { cwd: dir });
+      await environment.waitForElementVisible(
+        '[data-ta-clickable="modern-conflict-continue"]:not([disabled])'
+      );
+      await environment.waitForElementHidden(commitBtn);
+      await environment.click('[data-ta-clickable="modern-conflict-continue"]');
+      await environment.waitForElementHidden('[data-ta-container="conflict-banner"]');
+      await environment.waitForElementVisible(rowSel("Merge branch 'master' into other"));
     });
   });
 });

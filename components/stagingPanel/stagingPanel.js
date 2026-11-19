@@ -58,10 +58,6 @@ class StagingPanelViewModel {
     return true; // let the checkbox keep its native toggle, the checked binding re-syncs it
   }
 
-  toggleAll() {
-    this.staging.toggleAllStages();
-  }
-
   stageAll() {
     this.staging.files().forEach((f) => f.editState('staged'));
   }

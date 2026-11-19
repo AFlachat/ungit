@@ -106,7 +106,7 @@
       type="button"
       class="modern-btn-primary"
       data-ta-clickable="modern-commit"
-      data-bind="click: commit, disable: staging.commitValidationError(), attr: { title: staging.commitValidationError() }, text: commitLabel"
+      data-bind="visible: staging.isStageValid, click: commit, disable: staging.commitValidationError(), attr: { title: staging.commitValidationError() }, text: commitLabel"
     ></button>
   </div>
 </div>
