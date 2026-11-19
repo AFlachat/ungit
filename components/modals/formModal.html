@@ -7,7 +7,7 @@
       <!-- Autocomplete is off here because of https://github.com/FredrikNoren/ungit/issues/363 -->
       <form class="form-horizontal" data-bind="submit: submit" autocomplete="off">
         <div class="modal-body" data-bind="foreach: items">
-          <div class="form-group">
+          <div class="form-group" data-bind="css: { 'has-error': $data.invalid && $data.invalid() }">
             <label data-bind="text: name, attr: { for: name }" class="col-lg-2 control-label"></label>
             <div class="col-lg-10">
               <input class="form-control"

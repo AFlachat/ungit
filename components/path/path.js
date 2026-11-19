@@ -103,7 +103,12 @@ class PathViewModel extends ComponentRoot {
         }
         this.status(status.type);
         if (!this.repository()) {
-          this.repository(components.create('repository', { server: this.server, path: this }));
+          this.repository(
+            components.create(ungit.config.ui === 'modern' ? 'repositoryModern' : 'repository', {
+              server: this.server,
+              path: this,
+            })
+          );
         }
       } else if (status.type == 'uninited' || status.type == 'no-such-path') {
         if (status.subRepos && status.subRepos.length > 0) {

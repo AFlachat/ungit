@@ -1,0 +1,149 @@
+<!-- ko if: commit -->
+<div class="modern-panel modern-commit-details" data-ta-container="commit-details">
+  <div class="modern-panel-scroll" data-bind="with: commit">
+    <div class="modern-ph">
+      <div class="modern-kind">
+        <span data-bind="text: $root.isMerge($data) ? 'Merge commit' : 'Commit'"></span>
+        <button
+          type="button"
+          class="modern-shabtn"
+          title="Copy SHA"
+          data-ta-clickable="copy-sha"
+          data-bind="click: $root.copySha"
+        >
+          <span data-bind="text: $root.shortSha(sha1)"></span>
+          <span class="modern-copy-ic" data-bind="html: $root.copyIcon"></span>
+        </button>
+      </div>
+      <h2 data-ta-container="commit-title" data-bind="text: title"></h2>
+      <!-- ko if: body -->
+      <div class="modern-body" data-bind="text: body"></div>
+      <!-- /ko -->
+    </div>
+    <div class="modern-meta">
+      <span class="modern-avatar">
+        <span class="modern-av" data-bind="text: $root.initials($data)"></span>
+        <!-- ko ifnot: $root.avatarFailed -->
+        <img
+          alt=""
+          data-bind="attr: { src: $root.gravatarUrl($data) }, event: { error: function () { $root.avatarFailed(true); } }"
+        />
+        <!-- /ko -->
+      </span>
+      <div class="modern-who" data-bind="text: authorName"></div>
+      <div class="modern-when" data-bind="text: $root.authorDateText($data)"></div>
+    </div>
+    <div class="modern-kv">
+      <span>
+        <span data-bind="text: parents().length > 1 ? 'Parents:' : 'Parent:'"></span>
+        <!-- ko foreach: parents -->
+        <a
+          data-ta-clickable="modern-parent"
+          data-bind="click: function () { $root.gotoParent($data); }, text: $root.shortSha($data), attr: { 'data-ta-sha': $data }"
+        ></a>
+        <!-- /ko -->
+      </span>
+      <!-- ko if: $root.node().pgpVerifiedString() -->
+      <span class="modern-sig" data-bind="text: '✔ ' + $root.node().pgpVerifiedString()"></span>
+      <!-- /ko -->
+    </div>
+    <div class="modern-files-h">
+      <span
+        data-bind="text: ($root.files($data).length) + ' changed file' + ($root.files($data).length === 1 ? '' : 's')"
+      ></span>
+      <span class="modern-tot">
+        <span class="modern-add" data-bind="text: '+' + (numberOfAddedLines() || 0)"></span>
+        <span class="modern-del" data-bind="text: '−' + (numberOfRemovedLines() || 0)"></span>
+      </span>
+    </div>
+    <div data-ta-container="commit-files" data-bind="foreach: $root.files($data)">
+      <div
+        class="modern-file"
+        data-bind="
+          attr: { 'data-ta-file': fileName, title: displayName },
+          css: { active: $root.isActive($data) },
+          click: $root.openFile.bind($root)"
+      >
+        <svg class="modern-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z" opacity=".6"/></svg>
+        <span class="modern-fn"><bdi data-bind="text: displayName"></bdi></span>
+        <span class="modern-fs">
+          <span class="modern-add" data-bind="text: addText"></span>
+          <span class="modern-del" data-bind="text: delText"></span>
+        </span>
+        <span class="modern-bar5" data-bind="foreach: bar"><i data-bind="css: $data"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /ko -->
+<!-- ko if: notLoaded -->
+<div class="modern-panel modern-commit-details" data-ta-container="commit-not-loaded">
+  <div class="modern-panel-scroll">
+    <div class="modern-not-loaded">
+      <p>This commit is not loaded yet.</p>
+      <button
+        type="button"
+        class="modern-shabtn"
+        data-ta-clickable="load-more-commits"
+        data-bind="click: loadMore"
+      >
+        Load more commits
+      </button>
+    </div>
+  </div>
+</div>
+<!-- /ko -->
+<!-- ko if: stash -->
+<div class="modern-panel modern-commit-details" data-ta-container="stash-details">
+  <div class="modern-panel-scroll" data-bind="with: stash">
+    <div class="modern-ph">
+      <div class="modern-kind">
+        <span>Stash</span>
+        <span class="modern-sha" data-bind="text: $root.shortSha(sha1)"></span>
+      </div>
+      <h2 data-ta-container="stash-title" data-bind="text: message"></h2>
+      <div class="modern-body" data-bind="text: title"></div>
+      <div class="modern-stash-actions">
+        <button
+          type="button"
+          class="modern-shabtn"
+          data-ta-clickable="stash-apply"
+          data-bind="click: apply"
+        >
+          Apply
+        </button>
+        <button
+          type="button"
+          class="modern-shabtn"
+          data-ta-clickable="stash-drop"
+          data-bind="click: drop"
+        >
+          Drop
+        </button>
+      </div>
+    </div>
+    <div class="modern-files-h">
+      <span
+        data-bind="text: ($root.stashFiles($data).length) + ' changed file' + ($root.stashFiles($data).length === 1 ? '' : 's')"
+      ></span>
+    </div>
+    <div data-ta-container="stash-files" data-bind="foreach: $root.stashFiles($data)">
+      <div
+        class="modern-file"
+        data-bind="
+          attr: { 'data-ta-file': fileName, title: displayName },
+          css: { active: $root.isActive($data) },
+          click: $root.openFile.bind($root)"
+      >
+        <svg class="modern-ic" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z" opacity=".6"/></svg>
+        <span class="modern-fn"><bdi data-bind="text: displayName"></bdi></span>
+        <span class="modern-fs">
+          <span class="modern-add" data-bind="text: addText"></span>
+          <span class="modern-del" data-bind="text: delText"></span>
+        </span>
+        <span class="modern-bar5" data-bind="foreach: bar"><i data-bind="css: $data"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /ko -->

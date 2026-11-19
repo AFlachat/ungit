@@ -1,0 +1,9 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "contextMenu": "contextMenu.html"
+    },
+    "javascript": "contextMenu.bundle.js",
+    "css": "contextMenu.css"
+  }
+}

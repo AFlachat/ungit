@@ -373,7 +373,8 @@ git.binaryFileContent = (repoPath, filename, version, outPipe) => {
   return git(['show', `${version}:${filename}`], repoPath, null, outPipe);
 };
 
-git.diffFile = (repoPath, filename, oldFilename, sha1, ignoreWhiteSpace) => {
+git.diffFile = (repoPath, filename, oldFilename, sha1, ignoreWhiteSpace, contextLines) => {
+  const ctx = Number.isInteger(contextLines) && contextLines >= 0 ? [`-U${contextLines}`] : [];
   if (sha1) {
     return git(['rev-list', '--max-parents=0', sha1], repoPath).then((initialCommitSha1) => {
       const prevSha1 =
@@ -386,6 +387,7 @@ git.diffFile = (repoPath, filename, oldFilename, sha1, ignoreWhiteSpace) => {
         return git(
           [
             'diff',
+            ...ctx,
             ignoreWhiteSpace ? '-w' : '',
             `${prevSha1}:${oldFilename.trim()}`,
             `${sha1}:${filename.trim()}`,
@@ -394,7 +396,7 @@ git.diffFile = (repoPath, filename, oldFilename, sha1, ignoreWhiteSpace) => {
         );
       } else {
         return git(
-          ['diff', ignoreWhiteSpace ? '-w' : '', prevSha1, sha1, '--', filename.trim()],
+          ['diff', ...ctx, ignoreWhiteSpace ? '-w' : '', prevSha1, sha1, '--', filename.trim()],
           repoPath
         );
       }
@@ -421,18 +423,18 @@ git.diffFile = (repoPath, filename, oldFilename, sha1, ignoreWhiteSpace) => {
       } else {
         if (file && file.isNew) {
           return git(
-            ['diff', '--no-index', isWindows ? 'NUL' : '/dev/null', filename.trim()],
+            ['diff', ...ctx, '--no-index', isWindows ? 'NUL' : '/dev/null', filename.trim()],
             repoPath,
             true
           );
         } else if (file && file.renamed) {
           return git(
-            ['diff', ignoreWhiteSpace ? '-w' : '', `HEAD:${oldFilename}`, filename.trim()],
+            ['diff', ...ctx, ignoreWhiteSpace ? '-w' : '', `HEAD:${oldFilename}`, filename.trim()],
             repoPath
           );
         } else {
           return git(
-            ['diff', ignoreWhiteSpace ? '-w' : '', 'HEAD', '--', filename.trim()],
+            ['diff', ...ctx, ignoreWhiteSpace ? '-w' : '', 'HEAD', '--', filename.trim()],
             repoPath
           );
         }

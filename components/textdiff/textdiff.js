@@ -68,6 +68,7 @@ class TextDiffViewModel {
     this.loadCount = loadLimit;
     this.textDiffType = args.textDiffType;
     this.whiteSpace = args.whiteSpace;
+    this.contextLines = args.contextLines;
     this.isShowingDiffs = args.isShowingDiffs;
     this.editState = args.editState;
     this.wordWrap = args.wordWrap;
@@ -76,19 +77,27 @@ class TextDiffViewModel {
     this.htmlSrc = undefined;
     this.isParsed = ko.observable(false);
 
-    this.isShowingDiffs.subscribe((newValue) => {
-      if (newValue) this.render();
-    });
-    this.textDiffType.value.subscribe(() => {
-      if (this.isShowingDiffs()) this.render();
-    });
-    this.whiteSpace.value.subscribe(() => {
-      if (this.isShowingDiffs()) this.invalidateDiff();
-    });
+    this.subscriptions = [
+      this.isShowingDiffs.subscribe((newValue) => {
+        if (newValue) this.render();
+      }),
+      this.textDiffType.value.subscribe(() => {
+        if (this.isShowingDiffs()) this.render();
+      }),
+      this.whiteSpace.value.subscribe(() => {
+        if (this.isShowingDiffs()) this.invalidateDiff();
+      }),
+    ];
 
     if (this.isShowingDiffs()) {
       this.render();
     }
+  }
+
+  // Stops this instance from reacting to shared observables once it has been replaced.
+  dispose() {
+    this.subscriptions.forEach((sub) => sub.dispose());
+    this.subscriptions = [];
   }
 
   updateNode(parentElement) {
@@ -96,13 +105,15 @@ class TextDiffViewModel {
   }
 
   getDiffArguments() {
-    return {
+    const args = {
       file: this.filename,
       oldFile: this.oldFilename,
       path: this.repoPath(),
       sha1: this.sha1 ? this.sha1 : '',
       whiteSpace: this.whiteSpace.value(),
     };
+    if (this.contextLines !== undefined) args.context = this.contextLines;
+    return args;
   }
 
   invalidateDiff() {

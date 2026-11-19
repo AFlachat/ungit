@@ -92,6 +92,7 @@ AppContainerViewModel.prototype.templateChooser = function (data) {
 var app, appContainer, server;
 
 exports.start = function () {
+  if (ungit.config.ui === 'modern') document.body.classList.add('modern-ui');
   server = new Server();
   appContainer = new AppContainerViewModel();
   ungit.server = server;

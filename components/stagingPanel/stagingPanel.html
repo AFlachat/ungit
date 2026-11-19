@@ -1,0 +1,112 @@
+<div class="modern-panel modern-staging-panel" data-ta-container="staging-panel">
+  <div class="modern-panel-scroll">
+    <div class="modern-ph">
+      <div class="modern-kind">Working directory</div>
+      <h2>Uncommitted changes</h2>
+      <div class="modern-body">
+        <!-- ko if: branchName -->On branch <b data-bind="text: branchName"></b> ·
+        <!-- /ko -->
+        <span data-bind="text: staging.stats()"></span>
+      </div>
+    </div>
+
+    <!-- ko if: staging.conflictText -->
+    <div class="modern-conflict" data-ta-container="conflict-banner">
+      <div class="modern-conflict-text">
+        <span data-bind="text: staging.conflictText"></span> in progress. Resolve the conflicts,
+        then continue or abort.
+      </div>
+      <div class="modern-conflict-actions">
+        <button
+          type="button"
+          class="modern-btn"
+          data-ta-clickable="modern-conflict-continue"
+          data-bind="click: conflictContinue, enable: !staging.commitValidationError()"
+        >
+          Continue
+        </button>
+        <button
+          type="button"
+          class="modern-btn"
+          data-ta-clickable="modern-conflict-abort"
+          data-bind="click: conflictAbort"
+        >
+          Abort
+        </button>
+      </div>
+    </div>
+    <!-- /ko -->
+
+    <div class="modern-stage-sec" data-ta-container="modern-unstaged">
+      <div class="modern-files-h">
+        <span data-bind="text: 'Unstaged (' + unstagedFiles().length + ')'"></span>
+        <button
+          type="button"
+          class="modern-btn small"
+          data-ta-clickable="modern-stage-all"
+          data-bind="click: stageAll, visible: unstagedFiles().length"
+        >
+          Stage all
+        </button>
+      </div>
+      <!-- ko template: { name: 'stagingPanelFile', foreach: unstagedFiles, as: 'file' } --><!-- /ko -->
+      <div class="modern-sec-foot" data-bind="visible: hasFiles">
+        <button
+          type="button"
+          class="modern-discard"
+          data-ta-clickable="modern-discard-all"
+          data-bind="click: discardAll"
+        >
+          Discard all changes
+        </button>
+      </div>
+    </div>
+
+    <div class="modern-stage-sec" data-ta-container="modern-staged">
+      <div class="modern-files-h">
+        <span data-bind="text: 'Staged (' + stagedFiles().length + ')'"></span>
+        <button
+          type="button"
+          class="modern-btn small"
+          data-ta-clickable="modern-unstage-all"
+          data-bind="click: unstageAll, visible: stagedFiles().length"
+        >
+          Unstage all
+        </button>
+      </div>
+      <!-- ko template: { name: 'stagingPanelFile', foreach: stagedFiles, as: 'file' } --><!-- /ko -->
+      <div style="height: 8px"></div>
+    </div>
+  </div>
+
+  <div class="modern-commit-box">
+    <input
+      type="text"
+      maxlength="200"
+      placeholder="Commit summary"
+      data-ta-input="modern-commit-title"
+      data-bind="textInput: staging.commitMessageTitle, enable: !staging.inRebase(), event: { keypress: staging.onEnter.bind(staging) }"
+    />
+    <textarea
+      placeholder="Description (optional)"
+      data-ta-input="modern-commit-body"
+      data-bind="textInput: staging.commitMessageBody, enable: !staging.inRebase(), event: { keypress: staging.onAltEnter.bind(staging) }"
+    ></textarea>
+    <div class="modern-opts" data-bind="visible: staging.canAmend">
+      <label>
+        <input
+          type="checkbox"
+          data-ta-clickable="modern-amend"
+          data-bind="checked: staging.amend(), click: toggleAmend"
+        />
+        Amend previous commit
+      </label>
+    </div>
+    <button
+      type="button"
+      class="modern-btn-primary"
+      data-ta-clickable="modern-commit"
+      data-bind="visible: staging.isStageValid, click: commit, disable: staging.commitValidationError(), attr: { title: staging.commitValidationError() }, text: commitLabel"
+    ></button>
+  </div>
+</div>

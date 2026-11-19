@@ -6,6 +6,10 @@ ungit.components.register(
   'credentialsmodal',
   (args: any) => new CredentialsModalViewModel(args.remote)
 );
+ungit.components.register(
+  'refnamemodal',
+  (args: any) => new RefNameModalViewModel(args.title, args.label, args.closeFunc)
+);
 ungit.components.register('addremotemodal', (arg: any) => new AddRemoteModalViewModel(arg.path));
 ungit.components.register('addsubmodulemodal', (arg: any) => new AddSubmoduleModalViewModel(arg.path));
 
@@ -88,6 +92,38 @@ class AddSubmoduleModalViewModel extends FormModalViewModel {
       ungit.programEvents.dispatch({ event: 'submodule-fetch' });
     } catch (e) {
       ungit.server.unhandledRejection(e);
+    }
+  }
+}
+
+class RefNameModalViewModel extends FormModalViewModel {
+  closeFunc: (name: string | null) => void
+  done = false
+  constructor(title: string, label: string, closeFunc: (name: string | null) => void) {
+    super(title, 'ref-name-modal', true);
+    this.closeFunc = closeFunc;
+    const item = new FormItems(label, ko.observable(''), 'text', true);
+    item.invalid = ko.observable(false);
+    this.items.push(item);
+  }
+
+  submit() {
+    const item = this.items[0];
+    const name = (item.value() || '').trim();
+    if (!name || /\s/.test(name)) {
+      item.invalid!(true);
+      return;
+    }
+    this.done = true;
+    this.close();
+    this.closeFunc(name);
+  }
+
+  close() {
+    super.close();
+    if (!this.done) {
+      this.done = true;
+      this.closeFunc(null);
     }
   }
 }

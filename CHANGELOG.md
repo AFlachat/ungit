@@ -5,6 +5,9 @@ We are following the [Keep a Changelog](https://keepachangelog.com/) format.
 
 ## [Unreleased](https://github.com/FredrikNoren/ungit/compare/v1.5.29...master)
 
+### Added
+- Added opt-in modern UI (`ui: "modern"`, `ungit --ui=modern`)
+
 ## [1.5.29](https://github.com/FredrikNoren/ungit/compare/v1.5.28...v1.5.29)
 
 ### Changed

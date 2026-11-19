@@ -1,0 +1,9 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "sidebar": "sidebar.html"
+    },
+    "javascript": "sidebar.bundle.js",
+    "css": "sidebar.css"
+  }
+}

@@ -6,14 +6,22 @@ const components = require('ungit-components');
 const GitNodeViewModel = require('./git-node');
 const GitRefViewModel = require('./git-ref');
 const EdgeViewModel = require('./edge');
+const GraphActions = require('./git-graph-actions');
 const { ComponentRoot } = require('../ComponentRoot');
 const numberOfNodesPerLoad = ungit.config.numberOfNodesPerLoad;
 
-components.register('graph', (args) => new GraphViewModel(args.server, args.repoPath));
+components.register(
+  'graph',
+  (args) => new GraphViewModel(args.server, args.repoPath, !!args.headless)
+);
 
 class GraphViewModel extends ComponentRoot {
-  constructor(server, repoPath) {
+  constructor(server, repoPath, headless) {
     super();
+    this.headless = !!headless;
+    // Action classes of this bundle, for other component bundles (modern UI) that must not
+    // bundle their own copies (instanceof checks against RefViewModel would fail).
+    this.actions = GraphActions;
     this._isLoadNodesFromApiRunning = false;
     this.updateBranches = _.debounce(this._updateBranches, 250, this.defaultDebounceOption);
     this.loadNodesFromApi = _.debounce(this._loadNodesFromApi, 250, this.defaultDebounceOption);
@@ -90,6 +98,11 @@ class GraphViewModel extends ComponentRoot {
     ko.renderTemplate('graph', this, {}, parentElement);
   }
 
+  // Runs a graph action programmatically, see GraphActions.performAction.
+  performAction(ActionClass, node, context) {
+    return GraphActions.performAction(this, ActionClass, node, context);
+  }
+
   getNode(sha1, logEntry) {
     let nodeViewModel = this.nodesById[sha1];
     if (!nodeViewModel) nodeViewModel = this.nodesById[sha1] = new GitNodeViewModel(this, sha1);
@@ -141,14 +154,20 @@ class GraphViewModel extends ComponentRoot {
 
       this.edges(edges);
       this.nodes(nodes);
-      if (nodes.length > 0) {
-        this.graphHeight(nodes[nodes.length - 1].cy() + 80);
+      if (!this.headless) {
+        if (nodes.length > 0) {
+          this.graphHeight(nodes[nodes.length - 1].cy() + 80);
+        }
+        this.graphWidth(1000 + this.heighstBranchOrder * 90);
       }
-      this.graphWidth(1000 + this.heighstBranchOrder * 90);
     } catch (e) {
       this.server.unhandledRejection(e);
     } finally {
-      if (window.innerHeight - this.graphHeight() > 0 && nodeSize != this.nodes().length) {
+      if (
+        !this.headless &&
+        window.innerHeight - this.graphHeight() > 0 &&
+        nodeSize != this.nodes().length
+      ) {
         this.scrolledToEnd();
       }
       this._isLoadNodesFromApiRunning = false;

@@ -11,6 +11,13 @@ const ResetViewModel = HoverActions.ResetViewModel;
 const PushViewModel = HoverActions.PushViewModel;
 const SquashViewModel = HoverActions.SquashViewModel;
 
+// Ref names are user controlled and end up in the HTML of the yes/no modal.
+const escapeHtml = (s) =>
+  String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+  );
+
 class ActionBase {
   constructor(graph, text, style, icon) {
     this.graph = graph;
@@ -114,7 +121,8 @@ class Reset extends ActionBase {
     return new Promise((resolve, reject) => {
       components.showModal('yesnomodal', {
         title: 'Are you sure?',
-        details: 'Resetting to ref: ' + remoteRef.name + ' cannot be undone with ungit.',
+        details:
+          'Resetting to ref: ' + escapeHtml(remoteRef.name) + ' cannot be undone with ungit.',
         closeFunc: async (isYes) => {
           if (isYes) {
             await this.server
@@ -126,6 +134,8 @@ class Reset extends ActionBase {
               .then(resolve)
               .catch(reject);
             context.node(remoteRef.node());
+          } else {
+            resolve();
           }
           this.isRunning(false);
         },
@@ -285,7 +295,7 @@ class Delete extends ActionBase {
 
   perform() {
     const context = this.graph.currentActionContext();
-    let details = `"${context.refName}"`;
+    let details = `"${escapeHtml(context.refName)}"`;
     if (context.isRemoteBranch) {
       details = `<code _style="font-size: 100%">REMOTE</code> ${details}`;
     }
@@ -298,6 +308,8 @@ class Delete extends ActionBase {
         closeFunc: async (isYes) => {
           if (isYes) {
             await context.remove().then(resolve).catch(reject);
+          } else {
+            resolve();
           }
           this.isRunning(false);
         },
@@ -431,7 +443,25 @@ class Squash extends ActionBase {
   }
 }
 
+/**
+ * Runs an action class programmatically (e.g. from a context menu): sets the action context,
+ * performs, then disposes the action's computeds and clears the context.
+ */
+const performAction = async (graph, ActionClass, node, context) => {
+  const action = new ActionClass(graph, node);
+  graph.currentActionContext(context);
+  try {
+    return await action.doPerform();
+  } finally {
+    graph.currentActionContext(null);
+    ['visible', 'isHighlighted', 'cssClasses'].forEach((k) => {
+      if (action[k] && action[k].dispose) action[k].dispose();
+    });
+  }
+};
+
 const GraphActions = {
+  performAction: performAction,
   Move: Move,
   Rebase: Rebase,
   Merge: Merge,

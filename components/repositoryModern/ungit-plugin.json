@@ -1,0 +1,9 @@
+{
+  "exports": {
+    "knockoutTemplates": {
+      "repositoryModern": "repositoryModern.html"
+    },
+    "javascript": "repositoryModern.bundle.js",
+    "css": "repositoryModern.css"
+  }
+}

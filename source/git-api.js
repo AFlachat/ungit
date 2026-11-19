@@ -353,6 +353,7 @@ exports.registerApi = (env) => {
 
   app.get(`${exports.pathPrefix}/diff`, ensureAuthenticated, ensurePathExists, (req, res) => {
     const isIgnoreWhiteSpace = req.query.whiteSpace === 'true' ? true : false;
+    const contextLines = parseInt(req.query.context, 10);
     jsonResultOrFailProm(
       res,
       gitPromise.diffFile(
@@ -360,7 +361,8 @@ exports.registerApi = (env) => {
         req.query.file,
         req.query.oldFile,
         req.query.sha1,
-        isIgnoreWhiteSpace
+        isIgnoreWhiteSpace,
+        Number.isInteger(contextLines) && contextLines >= 0 ? contextLines : undefined
       )
     );
   });

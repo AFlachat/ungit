@@ -147,6 +147,9 @@ const defaultConfig = {
   // Number of refs to show on git commit bubbles to limit too many refs to appear.
   numRefsToShow: 5,
 
+  // UI layout: "classic" (default) or "modern" (sidebar, compact graph, details panel)
+  ui: 'classic',
+
   // Force gpg sign for tags and commits.  (additionally one can set up `git config commit.gpgsign true`
   // instead of this flag)  more on this: https://help.github.com/articles/signing-commits-using-gpg/
   isForceGPGSign: false,
@@ -301,6 +304,10 @@ const argv = yargs
   .describe(
     'numRefsToShow',
     'Number of refs to show on git commit bubbles to limit too many refs to appear.'
+  )
+  .describe(
+    'ui',
+    'UI layout: "classic" (default) or "modern" (sidebar, compact graph, details panel)'
   )
   .describe('tabSize', 'Specify tab size as number of spaces')
   .describe('isForceGPGSign', 'Force gpg sign for tags and commits.')

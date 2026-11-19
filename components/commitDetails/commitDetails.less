@@ -1,0 +1,118 @@
+@import '../repositoryModern/files.less';
+
+.modern-commit-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: @modern-bg-2;
+  color: @modern-text;
+  font-size: 13px;
+
+  .modern-shabtn {
+    font-family: var(--mono);
+    text-transform: none;
+    letter-spacing: 0;
+    color: @modern-muted;
+    background: @modern-bg-3;
+    border: 0;
+    border-radius: 4px;
+    padding: 1px 6px;
+    cursor: pointer;
+    &:hover {
+      color: #fff;
+    }
+    .modern-copy-ic {
+      display: inline-flex;
+      vertical-align: -1px;
+      margin-left: 3px;
+      svg {
+        fill: currentColor;
+      }
+    }
+  }
+  .modern-not-loaded {
+    padding: 24px 16px;
+    color: @modern-muted;
+    text-align: center;
+    .modern-shabtn {
+      font-family: inherit;
+      padding: 3px 12px;
+    }
+  }
+  .modern-stash-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    .modern-shabtn {
+      font-family: inherit;
+      padding: 3px 12px;
+    }
+  }
+  .modern-meta {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 2px 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid @modern-border;
+    align-items: center;
+  }
+  .modern-avatar {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    grid-row: span 2;
+    img {
+      position: absolute;
+      inset: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+    }
+  }
+  .modern-av {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: @modern-accent;
+  }
+  .modern-who {
+    color: @modern-text;
+  }
+  .modern-when {
+    color: @modern-faint;
+    font-size: 12px;
+  }
+  .modern-kv {
+    padding: 8px 16px;
+    border-bottom: 1px solid @modern-border;
+    font-size: 12px;
+    color: @modern-muted;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    a {
+      color: @modern-accent;
+      font-family: var(--mono);
+      text-decoration: none;
+      cursor: pointer;
+      margin-left: 4px;
+    }
+    .modern-sig {
+      color: @modern-green;
+    }
+  }
+  .modern-files-h .modern-tot {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+    display: flex;
+    gap: 6px;
+  }
+}
