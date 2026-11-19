@@ -231,7 +231,8 @@ class CommitListViewModel {
   }
 
   onDragOver(row, event) {
-    if (!this.repo.actions.dragRef || row.wip) return true;
+    const dragRef = this.repo.actions.dragRef;
+    if (!dragRef || row.wip || row.node === dragRef.node()) return true;
     event.dataTransfer.dropEffect = 'move';
     event.currentTarget.classList.add('drop-target');
     return false; // preventDefault: this row accepts the drop
@@ -249,6 +250,7 @@ class CommitListViewModel {
     const ref = actions.dragRef;
     if (!ref || row.wip) return true;
     actions.endDrag();
+    if (row.node === ref.node()) return false; // dropping on its own commit does nothing
     actions.openDropMenu(event.clientX, event.clientY, ref, row.node);
     return false;
   }

@@ -70,6 +70,12 @@ describe('menuItems', () => {
       assert(!r.includes('squash'));
     });
 
+    it('hides squash when canSquash is false', () => {
+      const r = ids(commitMenuItems({ ...base, isHead: true, hasParent: true, canSquash: false }));
+      assert(!r.includes('squash'));
+      assert(r.includes('uncommit'));
+    });
+
     it('escapes branch name', () => {
       const items = commitMenuItems({ ...base, currentBranch: '<img>' });
       assert(find(items, 'merge-commit').label.includes('&lt;img&gt;'));

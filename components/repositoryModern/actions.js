@@ -1,6 +1,11 @@
 const components = require('ungit-components');
 const GraphActions = require('../graph/git-graph-actions');
-const { commitMenuItems, refMenuItems, dropMenuItems } = require('../contextMenu/menuItems');
+const {
+  commitMenuItems,
+  refMenuItems,
+  dropMenuItems,
+  escapeHtml,
+} = require('../contextMenu/menuItems');
 
 const { performAction } = GraphActions;
 
@@ -26,13 +31,23 @@ class ModernActions {
 
   // ---- menus ----
 
+  // The commit two steps behind the given one, or null.
+  _grandparent(node) {
+    const parent = this.graph.nodesById[node.parents()[0]];
+    return parent ? this.graph.nodesById[parent.parents()[0]] || null : null;
+  }
+
   openCommitMenu(x, y, node) {
     if (!node || !this.repo.contextMenu) return;
+    const isHead = node === this.graph.HEAD();
+    const currentBranch = this.graph.checkedOutBranch();
+    const grandparent = isHead ? this._grandparent(node) : null;
     const items = commitMenuItems({
       sha1: node.sha1,
-      isHead: node === this.graph.HEAD(),
-      currentBranch: this.graph.checkedOutBranch(),
+      isHead,
+      currentBranch,
       hasParent: node.parents().length > 0,
+      canSquash: !!(isHead && currentBranch && grandparent && grandparent.isInited),
     });
     this.repo.contextMenu.open(x, y, items, (id) => this.run(id, { node }));
   }
@@ -145,7 +160,9 @@ class ModernActions {
   }
 
   async _checkoutIfNeeded(ref) {
-    if (!ref.current()) await ref.checkout();
+    if (ref.current()) return true;
+    await ref.checkout();
+    return !!ref.current(); // checkout() swallows its errors
   }
 
   async _run(id, node, ref) {
@@ -168,15 +185,19 @@ class ModernActions {
         return performAction(graph, GraphActions.Revert, node, node);
       case 'uncommit':
         return performAction(graph, GraphActions.Uncommit, node, node);
-      case 'squash':
-        return performAction(graph, GraphActions.Squash, node, checkedOutRef);
+      case 'squash': {
+        // "Squash with previous": HEAD and its parent become one staged change on the grandparent
+        const grandparent = this._grandparent(node);
+        if (!grandparent || !checkedOutRef) return;
+        return performAction(graph, GraphActions.Squash, grandparent, checkedOutRef);
+      }
       case 'reset-soft':
       case 'reset-mixed':
         return this._post('/reset', { to: node.sha1, mode: id.slice('reset-'.length) });
       case 'reset-hard':
         return this._askYes(
           'Are you sure?',
-          `Reset ${graph.checkedOutBranch() || 'HEAD'} to ${node.sha1.slice(0, 7)}? Uncommitted changes and commits after it will be lost.`,
+          `Reset ${escapeHtml(graph.checkedOutBranch() || 'HEAD')} to ${node.sha1.slice(0, 7)}? Uncommitted changes and commits after it will be lost.`,
           () => this._post('/reset', { to: node.sha1, mode: 'hard' })
         );
       case 'copy-sha':
@@ -202,15 +223,15 @@ class ModernActions {
       case 'move-ref':
         return ref.moveTo(node.sha1);
       case 'rebase-ref':
-        await this._checkoutIfNeeded(ref);
+        if (!(await this._checkoutIfNeeded(ref))) return;
         return performAction(graph, GraphActions.Rebase, node, ref);
       case 'merge-into-ref':
-        await this._checkoutIfNeeded(ref);
+        if (!(await this._checkoutIfNeeded(ref))) return;
         return this._post('/merge', { with: node.sha1 });
       case 'reset-ref-to-commit':
         return this._askYes(
           'Are you sure?',
-          `Reset ${ref.localRefName} to ${node.sha1.slice(0, 7)}? Commits after it will be lost.`,
+          `Reset ${escapeHtml(ref.localRefName)} to ${node.sha1.slice(0, 7)}? Commits after it will be lost.`,
           () => ref.moveTo(node.sha1, true)
         );
       default:

@@ -11,6 +11,10 @@ const ResetViewModel = HoverActions.ResetViewModel;
 const PushViewModel = HoverActions.PushViewModel;
 const SquashViewModel = HoverActions.SquashViewModel;
 
+// instanceof is not reliable when actions run from another component bundle (modern UI), which
+// bundles its own copy of git-ref.js.
+const isRef = (x) => x instanceof RefViewModel || !!(x && x.refName !== undefined && x.node);
+
 class ActionBase {
   constructor(graph, text, style, icon) {
     this.graph = graph;
@@ -152,7 +156,7 @@ class Rebase extends ActionBase {
   createHoverGraphic() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (onto instanceof RefViewModel) onto = onto.node();
+    if (isRef(onto)) onto = onto.node();
     const path = onto.getPathToCommonAncestor(this.node);
     return new RebaseViewModel(this.node, path);
   }
@@ -188,7 +192,7 @@ class Merge extends ActionBase {
   createHoverGraphic() {
     let node = this.graph.currentActionContext();
     if (!node) return null;
-    if (node instanceof RefViewModel) node = node.node();
+    if (isRef(node)) node = node.node();
     return new MergeViewModel(this.graph, this.node, node);
   }
 
@@ -389,7 +393,7 @@ class Squash extends ActionBase {
   createHoverGraphic() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (onto instanceof RefViewModel) onto = onto.node();
+    if (isRef(onto)) onto = onto.node();
 
     return new SquashViewModel(this.node, onto);
   }
@@ -397,7 +401,7 @@ class Squash extends ActionBase {
   perform() {
     let onto = this.graph.currentActionContext();
     if (!onto) return;
-    if (onto instanceof RefViewModel) onto = onto.node();
+    if (isRef(onto)) onto = onto.node();
     // remove last element as it would be a common ancestor.
     const path = this.node.getPathToCommonAncestor(onto).slice(0, -1);
 

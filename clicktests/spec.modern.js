@@ -20,6 +20,7 @@ describe('[MODERN] shell', () => {
       { bare: false }, // 7: diff view
       { bare: false, initCommits: 2 }, // 8: sidebar
       { bare: false, initCommits: 3 }, // 9: context menus and drag & drop
+      { bare: false, initCommits: 3 }, // 10: squash
     ]);
   });
 
@@ -519,6 +520,20 @@ describe('[MODERN] shell', () => {
       await environment.click('.modal-dialog .btn-primary');
       await environment.waitForElementHidden(item);
       await environment.waitForElementHidden(pill('feature'));
+    });
+
+    it('squashes HEAD with its previous commit', async () => {
+      await environment.openUngit(testRepoPaths[10]);
+      await environment.waitForElementVisible(rowSel('Init Commit 2'));
+      await rightClick(rowSel('Init Commit 2'));
+      await environment.click(action('squash'));
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.page.waitForFunction(
+        () => ungit.__app.content().repository().graph.HEAD().title() === 'Init Commit 0'
+      );
+      await environment.click('[data-ta-clickable="wip-row"]');
+      await environment.waitForElementVisible('[data-ta-file="testy1"]');
+      await environment.waitForElementVisible('[data-ta-file="testy2"]');
     });
   });
 });

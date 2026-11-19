@@ -23,7 +23,7 @@ const compactSeparators = (items) => {
   return out;
 };
 
-const commitMenuItems = ({ isHead, currentBranch, hasParent }) => {
+const commitMenuItems = ({ isHead, currentBranch, hasParent, canSquash }) => {
   const onBranch = !!currentBranch;
   const branch = onBranch ? bold(currentBranch) : 'HEAD';
   return compactSeparators([
@@ -36,7 +36,11 @@ const commitMenuItems = ({ isHead, currentBranch, hasParent }) => {
     !isHead && item('cherry-pick', `Cherry-pick onto ${branch}`),
     item('revert', 'Revert this commit'),
     isHead && onBranch && hasParent && item('uncommit', 'Uncommit (keep changes)'),
-    isHead && onBranch && hasParent && item('squash', 'Squash with previous…'),
+    isHead &&
+      onBranch &&
+      hasParent &&
+      canSquash !== false &&
+      item('squash', 'Squash with previous…'),
     'separator',
     onBranch &&
       item('reset', `Reset ${branch} to this commit`, {
@@ -97,4 +101,4 @@ const dropMenuItems = ({ refName, targetSha1 }) => {
   ]);
 };
 
-module.exports = { commitMenuItems, refMenuItems, dropMenuItems };
+module.exports = { commitMenuItems, refMenuItems, dropMenuItems, escapeHtml };
