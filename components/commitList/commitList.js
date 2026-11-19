@@ -332,6 +332,12 @@ class CommitListViewModel {
     this._scrollIntoView(rows.indexOf(next));
   }
 
+  // Scrolls the row of a commit into view; does nothing for a commit that is not loaded.
+  scrollTo(sha1) {
+    const index = this.rows().findIndex((r) => r.sha1 === sha1);
+    if (index >= 0) this._scrollIntoView(index);
+  }
+
   _scrollIntoView(index) {
     const el = this.rowsEl;
     if (!el) return;

@@ -1,0 +1,121 @@
+@import '../repositoryModern/theme.less';
+
+.modern-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: @modern-bg-2;
+  color: @modern-text;
+  font-size: 13px;
+
+  .modern-sb-filter {
+    flex: none;
+    margin: 10px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: @modern-bg;
+    border: 1px solid @modern-border;
+    color: @modern-muted;
+    font-size: 12px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    input {
+      all: unset;
+      flex: 1;
+      min-width: 0;
+      color: @modern-text;
+    }
+  }
+  .modern-sb-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .modern-sb-sec-h {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: @modern-muted;
+    cursor: pointer;
+    user-select: none;
+    &:hover {
+      color: @modern-text;
+    }
+  }
+  .modern-sb-count {
+    margin-left: auto;
+    font-weight: 400;
+    color: @modern-faint;
+  }
+  .modern-sb-chev {
+    width: 10px;
+    transition: transform 0.15s;
+  }
+  .modern-sb-sec.closed .modern-sb-chev {
+    transform: rotate(-90deg);
+  }
+  .modern-sb-group {
+    padding: 4px 12px 2px 26px;
+    font-size: 11px;
+    color: @modern-faint;
+  }
+  .modern-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 12px 3px 26px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-left: 2px solid transparent;
+    &:hover {
+      background: @modern-bg-hover;
+    }
+    &.current {
+      border-left-color: @modern-accent;
+      background: rgba(76, 154, 255, 0.08);
+      .modern-sb-nm {
+        color: #fff;
+        font-weight: 600;
+      }
+    }
+    &.sub {
+      padding-left: 40px;
+    }
+    &[draggable='true'] {
+      cursor: grab;
+    }
+    .modern-sb-ico {
+      flex: none;
+      display: inline-flex;
+      color: @modern-muted;
+      svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+    }
+    .modern-sb-nm {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .modern-sb-ab {
+      margin-left: auto;
+      font-size: 11px;
+      color: @modern-faint;
+      font-family: var(--mono);
+      .up {
+        color: @modern-green;
+      }
+      .dn {
+        color: @modern-yellow;
+        margin-left: 4px;
+      }
+    }
+  }
+}

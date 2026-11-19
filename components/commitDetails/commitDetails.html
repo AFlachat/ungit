@@ -72,3 +72,56 @@
   </div>
 </div>
 <!-- /ko -->
+<!-- ko if: stash -->
+<div class="modern-panel modern-commit-details" data-ta-container="stash-details">
+  <div class="modern-panel-scroll" data-bind="with: stash">
+    <div class="modern-ph">
+      <div class="modern-kind">
+        <span>Stash</span>
+        <span class="modern-sha" data-bind="text: $root.shortSha(sha1)"></span>
+      </div>
+      <h2 data-ta-container="stash-title" data-bind="text: message"></h2>
+      <div class="modern-body" data-bind="text: title"></div>
+      <div class="modern-stash-actions">
+        <button
+          type="button"
+          class="modern-shabtn"
+          data-ta-clickable="stash-apply"
+          data-bind="click: apply"
+        >
+          Apply
+        </button>
+        <button
+          type="button"
+          class="modern-shabtn"
+          data-ta-clickable="stash-drop"
+          data-bind="click: drop"
+        >
+          Drop
+        </button>
+      </div>
+    </div>
+    <div class="modern-files-h">
+      <span
+        data-bind="text: ($root.stashFiles($data).length) + ' changed file' + ($root.stashFiles($data).length === 1 ? '' : 's')"
+      ></span>
+    </div>
+    <div data-ta-container="stash-files" data-bind="foreach: $root.stashFiles($data)">
+      <div
+        class="modern-file"
+        data-bind="
+          attr: { 'data-ta-file': fileName, title: displayName },
+          css: { active: $root.isActive($data) },
+          click: $root.openFile.bind($root)"
+      >
+        <span class="modern-fn"><bdi data-bind="text: displayName"></bdi></span>
+        <span class="modern-fs">
+          <span class="modern-add" data-bind="text: '+' + additions"></span>
+          <span class="modern-del" data-bind="text: '−' + deletions"></span>
+        </span>
+        <span class="modern-bar5" data-bind="foreach: bar"><i data-bind="css: $data"></i></span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /ko -->

@@ -14,6 +14,13 @@ class CommitDetailsViewModel {
       const sel = this.repo.selection();
       return sel && sel !== 'WIP' ? this.repo.graph.nodesById[sel] || null : null;
     });
+    // the stash selected as 'stash:<sha1>', null otherwise
+    this.stash = ko.computed(() => {
+      const sel = this.repo.selection();
+      if (typeof sel !== 'string' || !sel.startsWith('stash:')) return null;
+      const stashes = this.repo.stash.stashedChanges ? this.repo.stash.stashedChanges() : [];
+      return stashes.find((s) => `stash:${s.sha1}` === sel) || null;
+    });
     this.commit = ko.computed(() => (this.node() ? this.node().commitComponent : null));
     this.node.subscribe(() => this.avatarFailed(false));
   }
@@ -55,16 +62,34 @@ class CommitDetailsViewModel {
     }));
   }
 
+  stashFiles(stash) {
+    return stash.commitDiff().commitLineDiffs.map((f) => ({
+      fileName: f.fileName(),
+      oldFileName: f.oldFileName(),
+      displayName: f.displayName() || f.fileName(),
+      type: f.fileType,
+      additions: f.added(),
+      deletions: f.removed(),
+      bar: bar5(f.added(), f.removed()),
+    }));
+  }
+
+  // sha1 of what the right panel shows: the commit or the stash
+  currentSha() {
+    const stash = this.stash();
+    return stash ? stash.sha1 : this.node().sha1;
+  }
+
   isActive(file) {
     const active = this.repo.activeFile();
-    return !!active && active.sha1 === this.node().sha1 && active.name === file.fileName;
+    return !!active && active.sha1 === this.currentSha() && active.name === file.fileName;
   }
 
   openFile(file) {
     this.repo.openFile({
       name: file.fileName,
       oldName: file.oldFileName,
-      sha1: this.node().sha1,
+      sha1: this.currentSha(),
       type: file.type,
     });
   }

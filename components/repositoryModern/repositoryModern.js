@@ -65,6 +65,19 @@ class RepositoryModernViewModel {
           ...files.filter((f) => f.editState() === 'staged'),
         ].map(mk);
       }
+      if (typeof sel === 'string' && sel.startsWith('stash:')) {
+        const sha1 = sel.slice('stash:'.length);
+        const stashes = this.stash.stashedChanges ? this.stash.stashedChanges() : [];
+        const stash = stashes.find((s) => s.sha1 === sha1);
+        return (stash ? stash.commitDiff().commitLineDiffs : []).map((f) => ({
+          name: f.fileName(),
+          oldName: f.oldFileName(),
+          sha1,
+          type: f.fileType,
+          additions: num(f.added()),
+          deletions: num(f.removed()),
+        }));
+      }
       this.graph.nodes(); // dependency: nodesById is a plain map
       const node = sel ? this.graph.nodesById[sel] : null;
       const diffs = node && node.commitComponent ? node.commitComponent.fileLineDiffs() : null;
@@ -97,6 +110,7 @@ class RepositoryModernViewModel {
 
     this.commitList = components.create('commitList', { repo: this });
     this.commitDetails = components.create('commitDetails', { repo: this });
+    this.sidebar = components.create('sidebar', { repo: this });
     this.diffView = components.create('diffView', { repo: this });
     this.stagingPanel = this.isBareDir ? null : components.create('stagingPanel', { repo: this });
 

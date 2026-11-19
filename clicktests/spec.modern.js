@@ -18,6 +18,7 @@ describe('[MODERN] shell', () => {
       { bare: false, initCommits: 3 }, // 5: right panel
       { bare: false, initCommits: 1 }, // 6: merge conflict
       { bare: false }, // 7: diff view
+      { bare: false, initCommits: 2 }, // 8: sidebar
     ]);
   });
 
@@ -345,6 +346,95 @@ describe('[MODERN] shell', () => {
       if (urls.length !== 1) throw new Error(`expected 1 /diff request, got ${urls.length}`);
       await environment.click('[data-ta-clickable="diff-close"]');
       await environment.waitForElementVisible(listSel);
+    });
+  });
+
+  describe('sidebar', () => {
+    const sb = '[data-ta-container="modern-sidebar"]';
+    const item = (name) => `${sb} .modern-sidebar-item[data-ta-name="${name}"]`;
+    const section = (id) => `${sb} [data-ta-section="${id}"]`;
+    const filterSel = '[data-ta-input="sidebar-filter"]';
+
+    it('lists local branches and marks the checked out one', async () => {
+      await environment.openUngit(testRepoPaths[8]);
+      await environment.backgroundAction('POST', '/api/branches', {
+        path: testRepoPaths[8],
+        name: 'feature',
+        sha1: 'HEAD',
+      });
+      await environment.ensureRedraw();
+      await environment.waitForElementVisible(`${item('master')}.current`);
+      await environment.waitForElementVisible(item('feature'));
+    });
+
+    it('checks out a branch on double click', async () => {
+      await environment.click(item('feature'), 2);
+      await environment.waitForElementVisible(`${item('feature')}.current`);
+      await environment.waitForElementVisible('.modern-ref.current[data-ta-name="feature"]');
+      await environment.waitForElementHidden(`${item('master')}.current`);
+    });
+
+    it('filters items case-insensitively', async () => {
+      await environment.insert(filterSel, 'FEAT');
+      await environment.waitForElementHidden(item('master'));
+      await environment.waitForElementVisible(item('feature'));
+      await environment.page.$eval(filterSel, (el) => {
+        el.value = '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await environment.waitForElementVisible(item('master'));
+    });
+
+    it('collapses a section and persists it', async () => {
+      await environment.click(`${section('local')} [data-ta-clickable="sidebar-section-local"]`);
+      await environment.waitForElementHidden(item('master'));
+      const stored = await environment.page.evaluate(() =>
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins -- runs in the browser
+        window.localStorage.getItem('modernSidebarClosed')
+      );
+      if (!/local/.test(stored)) throw new Error(`not persisted: ${stored}`);
+      await environment.click(`${section('local')} [data-ta-clickable="sidebar-section-local"]`);
+      await environment.waitForElementVisible(item('master'));
+    });
+
+    it('shows a stash, opens it in the right panel and applies it', async () => {
+      await environment.createTestFile(`${testRepoPaths[8]}/testy1`, testRepoPaths[8]);
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+      await environment.click('[data-ta-clickable="modern-stash"]');
+      await environment.waitForElementHidden('[data-ta-clickable="wip-row"]');
+      const stashItem = `${section('stashes')} .modern-sidebar-item`;
+      await environment.waitForElementVisible(stashItem);
+      const n = await environment.page.$$eval(stashItem, (els) => els.length);
+      if (n !== 1) throw new Error(`expected 1 stash, got ${n}`);
+      await environment.click(stashItem);
+      await environment.waitForElementVisible('[data-ta-container="stash-details"]');
+      await environment.waitForElementVisible('[data-ta-container="stash-files"] [data-ta-file]');
+      await environment.click('[data-ta-clickable="stash-apply"]');
+      await environment.waitForElementVisible('[data-ta-clickable="wip-row"]');
+    });
+
+    it('falls back to HEAD when the selected stash is dropped', async () => {
+      await environment.click('[data-ta-clickable="stash-drop"]');
+      await environment.click('.modal-dialog .btn-primary');
+      await environment.waitForElementHidden(`${section('stashes')} .modern-sidebar-item`);
+      await environment.waitForElementVisible('[data-ta-container="commit-details"]');
+      const head = await environment.page.evaluate(
+        () => ungit.__app.content().repository().graph.HEAD().sha1
+      );
+      if ((await selectedSha()) !== head) throw new Error('selection should fall back to HEAD');
+    });
+
+    it('selects the commit of a clicked branch', async () => {
+      await environment.click(item('master'));
+      const master = await environment.page.evaluate(
+        () => ungit.__app.content().repository().graph.getRef('refs/heads/master').node().sha1
+      );
+      await environment.page.waitForFunction(
+        (sha) =>
+          document.querySelector('.modern-repository').getAttribute('data-ta-selected-sha') === sha,
+        {},
+        master
+      );
     });
   });
 });

@@ -1,0 +1,59 @@
+<div class="modern-sidebar" data-ta-container="sidebar">
+  <label class="modern-sb-filter">
+    <span data-bind="html: filterIcon"></span>
+    <input
+      type="text"
+      placeholder="Filter (Ctrl+Alt+F)"
+      data-ta-input="sidebar-filter"
+      data-bind="textInput: filter"
+    />
+  </label>
+  <div class="modern-sb-scroll">
+    <!-- ko foreach: sections -->
+    <div class="modern-sb-sec" data-bind="css: { closed: closed }, attr: { 'data-ta-section': id }">
+      <div
+        class="modern-sb-sec-h"
+        data-bind="click: $parent.toggleSection.bind($parent), attr: { 'data-ta-clickable': 'sidebar-section-' + id }"
+      >
+        <span class="modern-sb-chev">▾</span><span data-bind="text: title"></span>
+        <span class="modern-sb-count" data-bind="text: count"></span>
+      </div>
+      <div class="modern-sb-items" data-bind="ifnot: closed">
+        <!-- ko foreach: groups -->
+        <!-- ko if: name -->
+        <div class="modern-sb-group" data-bind="text: name, attr: { 'data-ta-group': name }"></div>
+        <!-- /ko -->
+        <!-- ko foreach: items -->
+        <div
+          class="modern-sidebar-item"
+          data-bind="
+            css: { current: current, sub: sub },
+            attr: {
+              'data-ta-name': name,
+              'data-ta-kind': kind,
+              title: title,
+              draggable: draggable ? 'true' : null
+            },
+            click: $root.activate.bind($root),
+            event: { dblclick: $root.open.bind($root) }"
+        >
+          <span class="modern-sb-ico" data-bind="html: $parents[1].icon"></span>
+          <span class="modern-sb-nm" data-bind="text: $data.label || name"></span>
+          <!-- ko if: badge && badge() -->
+          <span class="modern-sb-ab" data-ta-container="ahead-behind">
+            <!-- ko if: badge().ahead -->
+            <span class="up" data-bind="text: '↑' + badge().ahead"></span>
+            <!-- /ko -->
+            <!-- ko if: badge().behind -->
+            <span class="dn" data-bind="text: '↓' + badge().behind"></span>
+            <!-- /ko -->
+          </span>
+          <!-- /ko -->
+        </div>
+        <!-- /ko -->
+        <!-- /ko -->
+      </div>
+    </div>
+    <!-- /ko -->
+  </div>
+</div>
